@@ -20,9 +20,4 @@ User Input → Router → [AIML / NLP / Logic / Image Classification] → Respon
 ## Planned API
 - `nlp.similarity.reply(text, context)`
 - `logic.logic_engine.reply(text, context)`
-- `image_classification.yolo_detector.detect(image_path)`
-
-## TODO
-- [ ] Implement command router in main.py
-- [ ] Set up initial AIML patterns
-- [ ] Prepare demo images and Q/A samples 
+- `image_classification.yolo_detector.detect(image_path)` 
