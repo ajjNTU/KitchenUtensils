@@ -1,0 +1,7 @@
+python-aiml==0.9.*
+spacy==3.7.*
+nltk==3.8.*
+simpful==2.10.*
+ultralytics==8.0.*
+torch==2.1.*
+scikit-learn==1.3.* 
