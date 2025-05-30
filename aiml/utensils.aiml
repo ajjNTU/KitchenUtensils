@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<aiml version="1.0.1" encoding="UTF-8">
+
+  <!-- === Dataset-aligned utensil definitions === -->
+
+  <category>
+    <pattern>WHAT IS A BLENDER</pattern>
+    <template>A blender is an electric appliance that purees or liquefies food using rotating blades.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A BOWL</pattern>
+    <template>A bowl is a round, deep dish used for mixing, serving, or eating food.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A CANOPENER</pattern>
+    <template>A can opener is a hand tool that safely cuts open metal cans.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A CAN OPENER</pattern>
+    <template>A can opener is a hand tool that safely cuts open metal cans.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A CHOPPINGBOARD</pattern>
+    <template>A chopping board is a flat surface on which food is cut; often wood or plastic.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A CHOPPING BOARD</pattern>
+    <template>A chopping board is a flat surface on which food is cut; often wood or plastic.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A COLANDER</pattern>
+    <template>A colander is a bowl-shaped strainer used to drain pasta or rinse produce.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A CUP</pattern>
+    <template>A cup is a small vessel with a handle used for drinking hot or cold beverages.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A DINNERFORK</pattern>
+    <template>A dinner fork is a four-tined utensil used for eating main-course foods.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A DINNER FORK</pattern>
+    <template>A dinner fork is a four-tined utensil used for eating main-course foods.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A DINNERKNIFE</pattern>
+    <template>A dinner knife is a non-serrated table knife for cutting cooked foods at the table.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A DINNER KNIFE</pattern>
+    <template>A dinner knife is a non-serrated table knife for cutting cooked foods at the table.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A FISHSLICE</pattern>
+    <template>A fish slice, also called a fish spatula, is a thin slotted turner for flipping delicate foods.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A FISH SLICE</pattern>
+    <template>A fish slice, also called a fish spatula, is a thin slotted turner for flipping delicate foods.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A GARLICPRESS</pattern>
+    <template>A garlic press is a utensil used to crush garlic cloves efficiently.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A GARLIC PRESS</pattern>
+    <template>A garlic press is a utensil used to crush garlic cloves efficiently.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A KITCHENKNIFE</pattern>
+    <template>A kitchen knife is a general-purpose sharp knife used for slicing and chopping ingredients.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A KITCHEN KNIFE</pattern>
+    <template>A kitchen knife is a general-purpose sharp knife used for slicing and chopping ingredients.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A LADLE</pattern>
+    <template>A ladle is a deep-bowled spoon used for serving soups, stews, or punch.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A PAN</pattern>
+    <template>A pan is a flat-bottomed cooking vessel, usually shallow, for frying or sautéing.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A PEELER</pattern>
+    <template>A peeler removes the thin outer skin of fruits and vegetables with a sharp blade.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A SAUCEPAN</pattern>
+    <template>A saucepan is a deep pot with a long handle, used for boiling or simmering liquids.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A SPOON</pattern>
+    <template>A spoon is a bowl-shaped utensil for eating, stirring, or serving soft foods.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A TEASPOON</pattern>
+    <template>A teaspoon is a small spoon used for stirring drinks and measuring small amounts.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS TONGS</pattern>
+    <template>Tongs are hinged utensils that grip and lift food without piercing it.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A TRAY</pattern>
+    <template>A tray is a flat, raised-edge surface for carrying or serving multiple items.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A WHISK</pattern>
+    <template>A whisk mixes or aerates ingredients by rapidly beating them with wire loops.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A WOODENSPOON</pattern>
+    <template>A wooden spoon is a heat-safe, gentle stirring utensil commonly used in cooking.</template>
+  </category>
+
+  <category>
+    <pattern>WHAT IS A WOODEN SPOON</pattern>
+    <template>A wooden spoon is a heat-safe, gentle stirring utensil commonly used in cooking.</template>
+  </category>
+
+</aiml>
