@@ -51,4 +51,18 @@ The YOLOv8 model is trained to detect the following utensil classes:
 - Tongs
 - Tray
 - Whisk
-- Woodenspoon 
+- Woodenspoon
+
+## Fuzzy Logic Safety (Simpful)
+
+```mermaid
+flowchart TD
+    Sharpness[Sharpness (0-10)] --> Fuzzy["Fuzzy System (Simpful)"]
+    Grip[Grip (0-10)] --> Fuzzy
+    Fuzzy -->|Rules| Safety[Safety (low/moderate/high)]
+```
+
+- Inputs: Sharpness, Grip (0–10 scale)
+- Output: Safety (low, moderate, high)
+- Rules: e.g., "IF sharpness IS high AND grip IS poor THEN safety IS low"
+- Used for queries like: "Is a peeler safe for children?" 

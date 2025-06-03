@@ -5,18 +5,27 @@
 - ✅ Stub functions for each module (aiml_reply, tfidf_reply, embed_reply, logic_reply, vision_reply)
 - ✅ Routing order: AIML → TF-IDF → Embedding → fallback
 - ✅ CLI loop with fallback message
+- ✅ Central router manages all input and fallback logic
+- ✅ Stateless design: no user session or persistent state
+- ✅ Debug output for routing and confidence scores
 
 ## Milestone 2: AIML Baseline ✅ COMPLETE  
 - ✅ Create `aiml/utensils.aiml` with patterns for all 21 classes
 - ✅ Include spaced and unspaced variants (e.g., "GARLIC PRESS" and "GARLICPRESS")
 - ✅ Load AIML kernel in main.py and implement aiml_reply
 - ✅ Enhanced intro message with examples and class list
+- ✅ Data-driven QnA: all patterns and answers in maintainable files
+- ✅ Input normalization before AIML (case, punctuation, contractions, spelling correction)
 
 ## Milestone 3: TF-IDF Similarity ✅ COMPLETE
 - ✅ Create `nlp/similarity.py` with TfidfSimilarity class
-- ✅ Use scikit-learn TF-IDF with 0.5 similarity threshold
+- ✅ Use scikit-learn TF-IDF with 0.5 similarity threshold (later raised to 0.65 for better fallback)
 - ✅ Create comprehensive `qna.csv` with 200+ question variations
 - ✅ Integrate into main.py as fallback after AIML
+- ✅ Centralized threshold management for easy tuning
+- ✅ Debug output: always show top TF-IDF candidates and scores
+- ✅ QnA and logic data in CSV for easy updates
+- ✅ Input normalization applied before TF-IDF
 
 ## Milestone 4: Embedding Fallback ✅ COMPLETE & TESTED
 - ✅ Add spaCy en_core_web_md to requirements.txt
@@ -33,30 +42,35 @@
 - ✅ Remove old embedding cache on QnA update
 - ✅ Comprehensive manual and automated testing of fallback logic and accuracy
 
-## Milestone 5: Logic Engine
-- [ ] Create `logic/rules.py` for fuzzy logic reasoning
-- [ ] Use simpful library for fuzzy sets and rules
-- [ ] Handle inputs like "small cutting tool" → kitchen knife
-- [ ] Integrate as fallback when similarity methods fail
+## Milestone 5: Logic Engine & Fuzzy Safety ✅ COMPLETE
+- ✅ Implement FOL logic engine with NLTK (logic_engine.py)
+- ✅ Add and parse logical-kb.csv (≥10 entries, tight syntax)
+- ✅ Integrate synonym map (aliases.py) for robust query handling
+- ✅ Integrate logic/fuzzy into main router (main.py)
+- ✅ Fuzzy safety model (simpful) with sharpness/grip/safety
+- ✅ Add dev tool: logic/build_kb.py for KB integrity
+- ✅ Add unit tests: tests/test_logic.py
+- ✅ Update docs: ARCHITECTURE.md (diagram), FLOW_EXAMPLES.md (scenarios)
+- ✅ Robust FOL negation: all rules use tilde (~) for negation, not custom NotX predicates
+- ✅ Canonical property parsing: multi-word properties (e.g., "microwave safe") are parsed to CamelCase (e.g., MicrowaveSafe)
+- ✅ Default sharpness is now 5.0 (medium) if no explicit fact is present, for correct fuzzy demo
+- ✅ Fuzzy safety routing: logic_reply now always called first, handles all logic/fuzzy queries before NLP
+- ✅ Dual-path fuzzy membership: safety_score uses fuzzy memberships if available, falls back to crisp value thresholds if not
+- ✅ Demo utensils for all fuzzy safety levels: kitchenknife (low), woodenspoon (high), ladle (moderate)
+- ✅ All logic/fuzzy milestones and demos validated in CLI
 
-## Milestone 6: Fuzzy Safety
-- [ ] Add input validation and sanitization
-- [ ] Handle edge cases (empty input, very long input)
-- [ ] Add confidence scoring for all methods
-- [ ] Graceful degradation when models fail
-
-## Milestone 7: Vision Stub
+## Milestone 6: Vision Stub (Next)
 - [ ] Create `image_classification/` module structure
 - [ ] Add placeholder functions for image processing
 - [ ] Prepare for YOLO integration in next milestone
 
-## Milestone 8: YOLO Integration
+## Milestone 7: YOLO Integration
 - [ ] Integrate ultralytics YOLO for kitchen utensil detection
 - [ ] Map YOLO classes to our 21 utensil categories
 - [ ] Handle image input through CLI or API endpoint
 - [ ] Return utensil identification with confidence scores
 
-## Milestone 9: Polish & Tests
+## Milestone 8: Polish & Tests
 - [ ] Add comprehensive unit tests
 - [ ] Performance optimization
 - [ ] Documentation improvements
@@ -65,8 +79,26 @@
 
 ---
 
-**Current Status:** Milestone 4 complete. The system now has:
+**Current Status:** Milestone 5/6 complete. The system now has:
 - AIML pattern matching for exact queries
 - TF-IDF similarity for token-based matching  
 - spaCy embedding fallback for semantic similarity
-- Intelligent routing with confidence thresholds 
+- Logic engine (FOL, NLTK) and fuzzy safety (Simpful) fully integrated
+- Robust, user-friendly CLI routing for all logic/fuzzy/NLP queries
+- Dev tools, tests, and documentation up to date
+- Next: Vision/YOLO milestones
+
+**Key Decisions & Considerations:**
+- Fallback chain: AIML → TF-IDF → Embedding → Logic → Vision; each module only triggers if previous fails/confidence is low
+- Input normalization (case, punctuation, contractions, spelling correction) before all processing
+- Stateless, modular design for rapid prototyping and easy testing
+- All QnA and logic data in CSV for easy updates
+- Centralized threshold management for routing and fallback
+- FOL negation uses tilde (~) for compatibility with NLTK prover (not custom NotX predicates)
+- Canonical property parsing: multi-word properties (e.g., "microwave safe") are parsed to CamelCase (e.g., MicrowaveSafe)
+- Default sharpness is medium (5.0) for utensils with no explicit sharpness fact
+- Fuzzy safety only uses sharpness and grip; KB must provide these for demo utensils
+- Fuzzy safety label is robust to Simpful API changes (dual-path logic: uses fuzzy memberships if available, falls back to crisp value thresholds if not)
+- All logic/fuzzy queries are routed before NLP for clarity and demo reliability
+- Demo utensils: kitchenknife (low safety), woodenspoon (high safety), ladle (moderate safety)
+- Debug output for transparency and testing 

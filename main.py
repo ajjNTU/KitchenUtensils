@@ -6,6 +6,7 @@ import os
 from nlp.similarity import TfidfSimilarity
 from nlp.embedding import EmbeddingSimilarity
 from nlp.utils import normalize
+from logic import check_fact, assert_fact, get_fuzzy_safety_reply
 
 AIML_PATH = os.path.join(os.path.dirname(__file__), 'aiml', 'utensils.aiml')
 QNA_PATH = os.path.join(os.path.dirname(__file__), 'qna.csv')
@@ -69,7 +70,28 @@ def embed_reply(user_input: str) -> 'BotReply | None':
     return None
 
 def logic_reply(user_input: str) -> 'BotReply | None':
-    # TODO: Implement logic reply
+    # Route to logic if query is a fact assertion, fact check, or fuzzy safety query
+    text = user_input.strip().lower()
+    
+    # Try fuzzy safety query first
+    # Heuristic: contains "safe" and "is" or starts with "how safe is"
+    if ("safe" in text and "is" in text) or text.startswith("how safe is") :
+        fuzzy_result = get_fuzzy_safety_reply(user_input) # Pass original for better parsing
+        if fuzzy_result:
+            return BotReply(text=fuzzy_result)
+    
+    # Then try fact check or assertion
+    try:
+        if text.startswith('check that '):
+            result = check_fact(user_input)
+            if result and result != "Unknown.":
+                return BotReply(text=result)
+        elif text.startswith('i know that '):
+            result = assert_fact(user_input)
+            if result:
+                return BotReply(text=result)
+    except Exception:
+        pass # Should ideally log this error
     return None
 
 def vision_reply(user_input: str) -> 'BotReply | None':
@@ -85,27 +107,39 @@ Welcome to the Kitchen Utensils Chatbot (Prototype) - DEBUG MODE
 
 You can:
 - Ask about kitchen utensils (e.g., 'What is a spatula?')
-- Try these examples:
-    * what is a spatula?
-    * what is a colander?
-    * what is a whisk?
+- Check facts about utensils (e.g., 'Check that tongs are microwave safe')
+- Tell the chatbot facts (e.g., 'I know that a tray is metal')
+- Ask about utensil safety (e.g., 'Is a kitchen knife safe for children?')
 - Type 'exit' or 'quit' to leave
 
 Supported utensil classes: {', '.join(classes)}
+Supported fact properties: Metal, Plastic, Wood, Ceramic, Sharp, MicrowaveSafe, OvenSafe, DishwasherSafe, ChildSafe, RequiresCaution, etc.
 
-[DEBUG MODE: Shows detailed routing decisions]
+[DEBUG MODE: Shows detailed routing decisions and logic engine steps]
 """)
     while True:
-        user_input = input("> ")
-        if user_input.lower() in ("exit", "quit"):
+        user_input_original = input("> ")
+        if user_input_original.lower() in ("exit", "quit"):
             print("Goodbye!")
             break
-        user_input = normalize(user_input)
-        print(f"\n🔍 DEBUG: Processing '{user_input}'")
-        print("─" * 50)
         
-        # Step 1: AIML
-        aiml_result = aiml_reply(user_input)
+        user_input_normalized = normalize(user_input_original)
+        print("\n🔍 DEBUG: Processing normalized input: " + user_input_normalized + ", Original input: " + user_input_original)
+        print("─" * 50)
+
+        # Step 0: Try Logic/Fuzzy Module first
+        # Pass original user input to logic_reply as it might need it for better parsing in get_fuzzy_safety_reply
+        logic_result_obj = logic_reply(user_input_original) 
+        if logic_result_obj:
+            print(f"0️⃣ Logic/Fuzzy: {logic_result_obj.text}")
+            print("✅ USING LOGIC/FUZZY ANSWER")
+            print(logic_result_obj.text)
+            continue # Skip to next input
+        else:
+            print(f"0️⃣ Logic/Fuzzy: No direct logic/fuzzy answer found. Proceeding to NLP pipeline...")
+
+        # Step 1: AIML (using normalized input)
+        aiml_result = aiml_reply(user_input_normalized)
         if aiml_result:
             print(f"1️⃣ AIML: Found match → {aiml_result.text}")
             print("✅ USING AIML ANSWER")
@@ -115,16 +149,16 @@ Supported utensil classes: {', '.join(classes)}
                 break
             continue
         else:
-            print(f"1️⃣ AIML: No match found for input: {user_input.upper()}")
-        
-        # Step 2: TF-IDF
-        tfidf_result = tfidf_reply(user_input)
+            print(f"1️⃣ AIML: No match found for input: {user_input_normalized.upper()}")
+
+        # Step 2: TF-IDF (using normalized input)
+        tfidf_result = tfidf_reply(user_input_normalized)
         tfidf_score = None
         tfidf_top_answer = None
         answer_found = False
         if tfidf_sim:
-            tfidf_score = tfidf_sim.get_best_similarity_score(user_input)
-            tfidf_sims = tfidf_sim.vectorizer.transform([user_input])
+            tfidf_score = tfidf_sim.get_best_similarity_score(user_input_normalized)
+            tfidf_sims = tfidf_sim.vectorizer.transform([user_input_normalized])
             from sklearn.metrics.pairwise import cosine_similarity
             all_sims = cosine_similarity(tfidf_sims, tfidf_sim.question_vecs)[0]
             best_idx = all_sims.argmax()
@@ -144,8 +178,8 @@ Supported utensil classes: {', '.join(classes)}
         embed_score = None
         embed_top_answer = None
         if embed_sim and tfidf_sim:
-            embed_score = embed_sim.get_best_similarity_score(user_input)
-            user_embedding = embed_sim.nlp(user_input).vector.reshape(1, -1)
+            embed_score = embed_sim.get_best_similarity_score(user_input_normalized)
+            user_embedding = embed_sim.nlp(user_input_normalized).vector.reshape(1, -1)
             similarities = cosine_similarity(user_embedding, embed_sim.question_embeddings)[0]
             best_idx = similarities.argmax()
             embed_top_answer = embed_sim.answers[best_idx]
@@ -154,7 +188,7 @@ Supported utensil classes: {', '.join(classes)}
             print(f"   Top Embedding score: {embed_score:.3f}")
             if not answer_found and tfidf_score is not None and tfidf_score < TFIDF_THRESHOLD:
                 print(f"   TF-IDF not confident ({tfidf_score:.3f} < {TFIDF_THRESHOLD}) → Trying embedding...")
-                embed_result = embed_reply(user_input)
+                embed_result = embed_reply(user_input_normalized) # Ensure this uses normalized
                 if embed_result:
                     print(f"   Found match (≥0.6) → {embed_result.text}")
                     print("✅ USING EMBEDDING ANSWER")
@@ -169,7 +203,7 @@ Supported utensil classes: {', '.join(classes)}
         
         # Step 4: Fallback
         if not answer_found:
-            print("4️⃣ Fallback: No matches found")
+            print("5️⃣ Fallback: No matches found")
             print("Sorry, I don't know that.")
 
 if __name__ == "__main__":

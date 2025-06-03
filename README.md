@@ -57,3 +57,15 @@ python -m spacy download en_core_web_md
 - Tray
 - Whisk
 - Woodenspoon
+
+## Project Structure
+- main.py: Chatbot CLI and router
+- nlp/: NLP modules (similarity, embedding, normalization)
+- logic/: Logic engine, fuzzy safety, aliases, KB
+- image_classification/: Vision module (stub)
+- aiml/: AIML patterns
+- memory_bank/: Project documentation and context
+- tests/: All unit and integration tests
+- scripts/: Dev and debug scripts (e.g., debug_embeddings.py, demo_milestone4.py, test_char_sim.py, test_word_overlap.py)
+
+All dev/test scripts are now organized in scripts/ or tests/.
