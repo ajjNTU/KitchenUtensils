@@ -1,31 +1,35 @@
 # Active Context: Kitchen Utensils Chatbot
 
-**Milestone 5/6 (Logic Engine, Fuzzy Safety) complete and fully integrated. All checklist items (code, tests, dev tools, docs) are done. Next: vision/YOLO stub.**
+**Milestone 6 (Vision Stub & Dataset Preparation) complete. Dataset citation properly added to README.md. Ready for CNN and YOLO implementation (Milestone 7-8).**
 
 ## Current Work Focus
-- Preparing for vision (YOLO) integration (Milestone 7)
-- Logic and fuzzy safety (Milestone 5/6) complete and robust
+- Implementing CNN image classifier for utensil recognition (Milestone 7)
+- Preparing for YOLOv8 object detection integration (Milestone 8)
+- Both YOLO and CNN datasets prepared and verified
 
 ## Recent Changes
-- Completed Milestone 5: Logic engine (FOL, NLTK) with robust tilde (~) negation
-- Completed Milestone 6: Fuzzy safety (Simpful) with sharpness/grip, dual-path membership fallback
-- Canonical property parsing for multi-word properties (CamelCase)
-- Default sharpness is now 5.0 (medium) for fuzzy demo utensils
-- Router now integrates logic/fuzzy modules and always routes logic/fuzzy before NLP
-- Demo utensils for all fuzzy safety levels: kitchenknife (low), woodenspoon (high), ladle (moderate)
-- Dev tool build_kb.py for KB integrity
-- Tests for logic/fuzzy in tests/test_logic.py
-- Documentation updated (ARCHITECTURE.md, FLOW_EXAMPLES.md)
+- Completed Milestone 6: Vision stub structure and dataset preparation
+- Added proper dataset citation to README.md with corrected URL (https://universe.roboflow.com/utensils/utensils-wp5hm)
+- Organized both YOLO (utensils-wp5hm-yolo8/) and CNN (cls_data/) datasets with train/valid/test splits
+- Created scripts for dataset conversion (crop_yolo_to_classification.py) and verification (count_split_images.py)
+- Added acknowledgments section to README.md for proper attribution
+- Updated TODO.md with expanded milestones and practical implementation steps
+- All 21 utensil classes present in both dataset formats
 
 ## Next Steps
-- Implement vision stubs and prepare for YOLO integration (Milestone 7-8)
-- Polish, test, and document (Milestone 9)
+- Train CNN classifier using transfer learning (MobileNetV3/EfficientNet-B0)
+- Integrate CNN into chatbot with image input handling
+- Train YOLOv8 model for multi-object detection
+- Compare CNN vs YOLO performance and document results
 
 ## Active Decisions & Considerations
 - Centralized threshold management for routing
 - Stateless, modular design
 - All QnA and logic data in CSV for easy updates
 - CLI interface for rapid prototyping
+- Proper academic citation in README.md for dataset attribution
+- Both CNN (single-label classification) and YOLO (multi-object detection) approaches
+- Dataset preparation scripts for reproducibility
 - Fuzzy safety only uses sharpness and grip; KB must provide these for demo utensils
 - Fuzzy safety label is robust to Simpful API changes (dual-path logic)
 - All logic/fuzzy queries are routed before NLP for clarity and demo reliability
@@ -34,4 +38,6 @@
 ## Important Patterns & Preferences
 - Fallback chain: AIML → TF-IDF → Embedding → Logic → Vision
 - Input normalization before all processing
-- Debug output for transparency and testing 
+- Debug output for transparency and testing
+- Proper dataset citation and acknowledgments in documentation
+- Modular vision architecture supporting both CNN classification and YOLO detection 

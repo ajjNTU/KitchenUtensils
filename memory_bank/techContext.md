@@ -6,7 +6,8 @@
 - scikit-learn (TF-IDF similarity)
 - spaCy (en_core_web_md, embeddings)
 - simpful (fuzzy logic)
-- ultralytics, torch (YOLOv8, planned)
+- ultralytics, torch (YOLOv8, in development)
+- tensorflow/keras (CNN classification, in development)
 - pyspellchecker (input normalization)
 - NLTK (FOL logic engine)
 
@@ -27,7 +28,8 @@
 ## Tool Usage Patterns
 - All NLP modules importable from nlp/
 - Logic and fuzzy modules importable from logic/
-- Image classification stub in image_classification/
+- Vision modules in image_classification/ with CNN and YOLO stubs ready
+- Dataset preparation scripts in scripts/ for reproducibility
 - Robust FOL negation: all rules use tilde (~) for negation, not custom NotX predicates
 - Canonical property parsing: multi-word properties (e.g., "microwave safe") are parsed to CamelCase (e.g., MicrowaveSafe)
 - Default sharpness is now 5.0 (medium) if no explicit fact is present, for correct fuzzy demo
@@ -35,6 +37,13 @@
 - Dual-path fuzzy membership: safety_score uses fuzzy memberships if available, falls back to crisp value thresholds if not
 - Demo utensils for all fuzzy safety levels: kitchenknife (low), woodenspoon (high), ladle (moderate)
 
+## Dataset Information
+- **Source:** Kitchen Utensils Dataset from Roboflow
+- **URL:** https://universe.roboflow.com/utensils/utensils-wp5hm
+- **Format:** YOLO (detection) and CNN (classification) splits prepared
+- **Classes:** 21 kitchen utensil categories
+- **Access Date:** 04/06/2025
+
 ---
 
-Logic engine (FOL, NLTK) and fuzzy safety (Simpful) are now fully integrated, robust, and validated for all demo utensils. Next: vision/YOLO stub. 
+Dataset preparation and vision architecture complete. Both YOLO (object detection) and CNN (classification) datasets ready for model training. Proper citation added to project documentation. 

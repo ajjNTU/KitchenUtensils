@@ -149,4 +149,8 @@ Thumbs.db
 *_embeddings.npy
 
 # Test files
-test_*.py 
+test_*.py
+
+# Image data
+image_classification/cls_data/
+image_classification/utensils-wp5hm-yolo8/ 

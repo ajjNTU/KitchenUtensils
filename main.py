@@ -112,7 +112,10 @@ You can:
 - Ask about utensil safety (e.g., 'Is a kitchen knife safe for children?')
 - Type 'exit' or 'quit' to leave
 
-Supported utensil classes: {', '.join(classes)}
+Supported utensil classes:
+{', '.join(classes[:8])}
+{', '.join(classes[8:16])}
+{', '.join(classes[16:])}
 Supported fact properties: Metal, Plastic, Wood, Ceramic, Sharp, MicrowaveSafe, OvenSafe, DishwasherSafe, ChildSafe, RequiresCaution, etc.
 
 [DEBUG MODE: Shows detailed routing decisions and logic engine steps]

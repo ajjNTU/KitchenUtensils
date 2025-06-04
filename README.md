@@ -69,3 +69,26 @@ python -m spacy download en_core_web_md
 - scripts/: Dev and debug scripts (e.g., debug_embeddings.py, demo_milestone4.py, test_char_sim.py, test_word_overlap.py)
 
 All dev/test scripts are now organized in scripts/ or tests/.
+
+## Dataset
+
+This project uses the **Kitchen Utensils Dataset** from Roboflow for training and testing image classification models.
+
+**Citation:**
+```
+Kitchen Utensils Dataset. Roboflow Universe. 
+Available at: https://universe.roboflow.com/utensils/utensils-wp5hm
+Accessed: 04/06/2025
+```
+
+The dataset includes:
+- 21 kitchen utensil classes with bounding box annotations
+- Train/validation/test splits for both YOLO detection and CNN classification
+- Over 1000+ annotated images across all classes
+
+## Acknowledgments
+
+- **Roboflow** for providing the Kitchen Utensils dataset
+- **spaCy** team for the en_core_web_md language model
+- **Ultralytics** for YOLOv8 framework
+- **scikit-learn** and **NLTK** for machine learning and NLP capabilities

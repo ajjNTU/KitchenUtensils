@@ -59,34 +59,45 @@
 - ✅ Demo utensils for all fuzzy safety levels: kitchenknife (low), woodenspoon (high), ladle (moderate)
 - ✅ All logic/fuzzy milestones and demos validated in CLI
 
-## Milestone 6: Vision Stub (Next)
-- [ ] Create `image_classification/` module structure
-- [ ] Add placeholder functions for image processing
-- [ ] Prepare for YOLO integration in next milestone
+## Milestone 6: Vision Stub & Dataset Preparation ✅ COMPLETE
+- ✅ Structure image_classification/ with __init__.py, cnn.py, yolo.py, utils.py
+- ✅ Add placeholder predict(image) in cnn.py and yolo.py for chatbot integration
+- ✅ Add dependency guard for Ultralytics (YOLO) import
+- ✅ Prepare and organize datasets for both CNN and YOLO:
+    - YOLO: utensils-wp5hm-yolo8/ (YOLOv8 format, images + labels)
+    - CNN: cls_data/ (cropped images per class, train/val/test split)
+- ✅ Use scripts/crop_yolo_to_classification.py to generate CNN crops from YOLO labels
+- ✅ Confirm dataset splits and counts with scripts/count_split_images.py
+- ✅ Dataset citation: Kitchen Utensils dataset from Roboflow (https://universe.roboflow.com/roboflow-100/kitchen-utensils-wp5hm). Please cite as: "Kitchen Utensils Dataset, Roboflow Universe, https://universe.roboflow.com/roboflow-100/kitchen-utensils-wp5hm"
 
-## Milestone 7: YOLO Integration
-- [ ] Integrate ultralytics YOLO for kitchen utensil detection
-- [ ] Map YOLO classes to our 21 utensil categories
-- [ ] Handle image input through CLI or API endpoint
-- [ ] Return utensil identification with confidence scores
+## Milestone 7: Custom CNN Image Classifier
+- [ ] Use transfer learning (e.g., MobileNetV3 or EfficientNet-B0) for utensil classification
+- [ ] Apply augmentations: flips, rotations, color jitter
+- [ ] Train on cls_data/ (single-label, one crop per object)
+- [ ] Save model as utensils_cnn.h5 and log model.summary()
+- [ ] Evaluate: accuracy, per-class F1, confusion matrix (sklearn)
+- [ ] Document model architecture, training, and results
+- [ ] Integrate into chatbot: on "What is in this image?" prompt for file/URL, run classifier, return result
+- [ ] Add AIML tag and main loop handler for image queries
 
-## Milestone 8: Polish & Tests
-- [ ] Add comprehensive unit tests
-- [ ] Performance optimization
-- [ ] Documentation improvements
-- [ ] Error handling improvements
-- [ ] Add logging and metrics
+## Milestone 8: YOLOv8 Object Detection
+- [ ] Train YOLOv8 on utensils-wp5hm-yolo8/ (detection format)
+- [ ] Save weights as utensils_yolov8.pt
+- [ ] Ensure class mapping matches chatbot labels
+- [ ] Integrate YOLO into chatbot: allow user to select image, run detection, return list of detected utensils and confidences
+- [ ] Optionally, save/display annotated image
+- [ ] Compare YOLO mAP@0.5 to CNN accuracy, document runtime and results
+
+## Milestone 9: Polish, Tests, and Documentation
+- [ ] Add unit tests for cnn.predict() and yolo.detect() with sample images
+- [ ] Add integration test: simulate AIML call, assert answer contains known class
+- [ ] Improve error handling, lazy-load models, cache predictions
+- [ ] Update documentation: usage, limitations, performance, comparison table
+- [ ] Add dataset citation and HOW-TO for dataset preparation and model training
 
 ---
 
-**Current Status:** Milestone 5/6 complete. The system now has:
-- AIML pattern matching for exact queries
-- TF-IDF similarity for token-based matching  
-- spaCy embedding fallback for semantic similarity
-- Logic engine (FOL, NLTK) and fuzzy safety (Simpful) fully integrated
-- Robust, user-friendly CLI routing for all logic/fuzzy/NLP queries
-- Dev tools, tests, and documentation up to date
-- Next: Vision/YOLO milestones
+**Current Status:** Milestone 6 (vision stub & dataset prep) complete. Datasets for both CNN and YOLO are present and verified. Scripts for conversion and counting are in scripts/. Dataset citation added.
 
 **Key Decisions & Considerations:**
 - Fallback chain: AIML → TF-IDF → Embedding → Logic → Vision; each module only triggers if previous fails/confidence is low
