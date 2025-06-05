@@ -68,7 +68,6 @@
     - CNN: cls_data/ (cropped images per class, train/val/test split)
 - ✅ Use scripts/crop_yolo_to_classification.py to generate CNN crops from YOLO labels
 - ✅ Confirm dataset splits and counts with scripts/count_split_images.py
-- ✅ Dataset citation: Kitchen Utensils dataset from Roboflow (https://universe.roboflow.com/roboflow-100/kitchen-utensils-wp5hm). Please cite as: "Kitchen Utensils Dataset, Roboflow Universe, https://universe.roboflow.com/roboflow-100/kitchen-utensils-wp5hm"
 
 ## Milestone 7: Custom CNN Image Classifier
 - [ ] Use transfer learning (e.g., MobileNetV3 or EfficientNet-B0) for utensil classification

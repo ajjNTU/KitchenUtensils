@@ -7,9 +7,11 @@ from nlp.similarity import TfidfSimilarity
 from nlp.embedding import EmbeddingSimilarity
 from nlp.utils import normalize
 from logic import check_fact, assert_fact, get_fuzzy_safety_reply
+from image_classification import CNNClassifier
 
 AIML_PATH = os.path.join(os.path.dirname(__file__), 'aiml', 'utensils.aiml')
 QNA_PATH = os.path.join(os.path.dirname(__file__), 'qna.csv')
+CNN_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'image_classification', 'cnn_model.h5')
 TFIDF_THRESHOLD = 0.65
 
 @dataclass
@@ -37,6 +39,17 @@ try:
     embed_sim = EmbeddingSimilarity(QNA_PATH)
 except Exception as e:
     print(f"Warning: Could not load embedding similarity: {e}")
+
+# Initialize CNN classifier at startup
+cnn_classifier = None
+try:
+    if os.path.exists(CNN_MODEL_PATH):
+        cnn_classifier = CNNClassifier(model_path=CNN_MODEL_PATH)
+        print("CNN classifier loaded successfully")
+    else:
+        print(f"Warning: CNN model not found at {CNN_MODEL_PATH}. Vision features will not work.")
+except Exception as e:
+    print(f"Warning: Could not load CNN classifier: {e}")
 
 def aiml_reply(user_input: str) -> 'BotReply | None':
     if not aiml_kernel.numCategories():
@@ -94,9 +107,49 @@ def logic_reply(user_input: str) -> 'BotReply | None':
         pass # Should ideally log this error
     return None
 
-def vision_reply(user_input: str) -> 'BotReply | None':
-    # TODO: Implement vision reply
-    return None
+def vision_reply(image_path: str) -> 'BotReply | None':
+    """
+    Classify kitchen utensil from image.
+    
+    Args:
+        image_path: Path to image file
+        
+    Returns:
+        BotReply with classification results or None if failed
+    """
+    if cnn_classifier is None:
+        return BotReply(text="Sorry, vision classification is not available. CNN model not loaded.")
+    
+    if not os.path.exists(image_path):
+        return BotReply(text=f"Sorry, I cannot find the image file: {image_path}")
+    
+    try:
+        # Get top 3 predictions
+        predictions = cnn_classifier.predict(image_path, top_k=3)
+        
+        if not predictions:
+            return BotReply(text="Sorry, I couldn't classify this image.")
+        
+        # Format response
+        top_class, top_confidence = predictions[0]
+        
+        if top_confidence < 0.1:  # Very low confidence
+            response = "I'm not confident about this image. It might be a kitchen utensil, but I can't identify it clearly."
+        elif top_confidence < 0.3:  # Low confidence
+            response = f"I think this might be a {top_class.lower()}, but I'm not very confident (confidence: {top_confidence:.1%})."
+        else:  # Reasonable confidence
+            response = f"I can see a {top_class.lower()} in this image (confidence: {top_confidence:.1%})."
+        
+        # Add alternative predictions if they're reasonably close
+        if len(predictions) > 1:
+            second_class, second_confidence = predictions[1]
+            if second_confidence > 0.1:  # Only show if reasonably confident
+                response += f" It could also be a {second_class.lower()} (confidence: {second_confidence:.1%})."
+        
+        return BotReply(text=response)
+        
+    except Exception as e:
+        return BotReply(text=f"Sorry, I encountered an error while analyzing the image: {str(e)}")
 
 def main():
     classes = [
@@ -110,6 +163,7 @@ You can:
 - Check facts about utensils (e.g., 'Check that tongs are microwave safe')
 - Tell the chatbot facts (e.g., 'I know that a tray is metal')
 - Ask about utensil safety (e.g., 'Is a kitchen knife safe for children?')
+- Identify utensils from images (e.g., 'image: path/to/image.jpg')
 - Type 'exit' or 'quit' to leave
 
 Supported utensil classes:
@@ -125,6 +179,22 @@ Supported fact properties: Metal, Plastic, Wood, Ceramic, Sharp, MicrowaveSafe, 
         if user_input_original.lower() in ("exit", "quit"):
             print("Goodbye!")
             break
+        
+        # Check if input is an image path
+        if user_input_original.lower().startswith("image:"):
+            image_path = user_input_original[6:].strip()
+            print(f"\n🖼️ DEBUG: Processing image: {image_path}")
+            print("─" * 50)
+            
+            vision_result = vision_reply(image_path)
+            if vision_result:
+                print(f"4️⃣ Vision: {vision_result.text}")
+                print("✅ USING VISION ANSWER")
+                print(vision_result.text)
+            else:
+                print("4️⃣ Vision: Failed to process image")
+                print("Sorry, I couldn't process that image.")
+            continue
         
         user_input_normalized = normalize(user_input_original)
         print("\n🔍 DEBUG: Processing normalized input: " + user_input_normalized + ", Original input: " + user_input_original)

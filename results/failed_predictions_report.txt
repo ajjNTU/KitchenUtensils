@@ -1,0 +1,187 @@
+FAILED PREDICTIONS ANALYSIS REPORT
+==================================================
+
+Generated: 2025-06-05 20:23:43
+Total test images: 489
+Failed predictions: 16
+Accuracy: 96.73%
+
+DETAILED FAILED PREDICTIONS:
+------------------------------
+
+1. FAILED PREDICTION
+   Filename: Canopener\can_opener_13_jpeg.rf.1f287cbbe90f0a563973e8c4cdb07d9d_0.jpg
+   True Class: Canopener
+   Predicted Class: Peeler
+   Prediction Confidence: 0.5820
+   True Class Probability: 0.2496
+   Top 3 Predictions:
+      1. Peeler: 0.5820
+      2. Canopener: 0.2496
+      3. Garlicpress: 0.1270
+
+2. FAILED PREDICTION
+   Filename: Cup\cup_36_jpg.rf.cff172c251c04bbb386d0329ad72ed00_0.jpg
+   True Class: Cup
+   Predicted Class: Bowl
+   Prediction Confidence: 0.8310
+   True Class Probability: 0.1667
+   Top 3 Predictions:
+      1. Bowl: 0.8310
+      2. Cup: 0.1667
+      3. Pan: 0.0019
+
+3. FAILED PREDICTION
+   Filename: Dinnerknife\dinner_knife_3_JPG.rf.c8263c3175ceacf6499e465739ea13cd_0.jpg
+   True Class: Dinnerknife
+   Predicted Class: Peeler
+   Prediction Confidence: 0.2192
+   True Class Probability: 0.0637
+   Top 3 Predictions:
+      1. Peeler: 0.2192
+      2. Teaspoon: 0.1909
+      3. Kitchenknife: 0.1653
+
+4. FAILED PREDICTION
+   Filename: Ladle\GOPR0897_JPG.rf.570afd90ba6575c7e2903f62e917a5f5_0.jpg
+   True Class: Ladle
+   Predicted Class: Teaspoon
+   Prediction Confidence: 0.4960
+   True Class Probability: 0.4819
+   Top 3 Predictions:
+      1. Teaspoon: 0.4960
+      2. Ladle: 0.4819
+      3. Spoon: 0.0189
+
+5. FAILED PREDICTION
+   Filename: Ladle\GOPR5134_JPG.rf.5f356cb2fde9172b0a93e463323fadb9_0.jpg
+   True Class: Ladle
+   Predicted Class: Teaspoon
+   Prediction Confidence: 0.5076
+   True Class Probability: 0.3596
+   Top 3 Predictions:
+      1. Teaspoon: 0.5076
+      2. Ladle: 0.3596
+      3. Spoon: 0.1221
+
+6. FAILED PREDICTION
+   Filename: Ladle\ladle_38_jpg.rf.6fe1aa589ba18ef207c76e55f7946d55_0.jpg
+   True Class: Ladle
+   Predicted Class: Teaspoon
+   Prediction Confidence: 0.8902
+   True Class Probability: 0.0129
+   Top 3 Predictions:
+      1. Teaspoon: 0.8902
+      2. Dinnerfork: 0.0513
+      3. Spoon: 0.0271
+
+7. FAILED PREDICTION
+   Filename: Spoon\GOPR1053_JPG.rf.ca8647429cfafcf775b4b10eba027a5d_0.jpg
+   True Class: Spoon
+   Predicted Class: Teaspoon
+   Prediction Confidence: 0.7624
+   True Class Probability: 0.0253
+   Top 3 Predictions:
+      1. Teaspoon: 0.7624
+      2. Woodenspoon: 0.2094
+      3. Spoon: 0.0253
+
+8. FAILED PREDICTION
+   Filename: Spoon\GOPR1081_JPG.rf.4b9eaf6ed7eaacd54a36f329bc0f414b_0.jpg
+   True Class: Spoon
+   Predicted Class: Teaspoon
+   Prediction Confidence: 0.7899
+   True Class Probability: 0.2085
+   Top 3 Predictions:
+      1. Teaspoon: 0.7899
+      2. Spoon: 0.2085
+      3. Ladle: 0.0011
+
+9. FAILED PREDICTION
+   Filename: Spoon\GOPR1135_JPG.rf.445121fa3185a7d5690bd56eb0f14cbb_0.jpg
+   True Class: Spoon
+   Predicted Class: Teaspoon
+   Prediction Confidence: 0.9264
+   True Class Probability: 0.0736
+   Top 3 Predictions:
+      1. Teaspoon: 0.9264
+      2. Spoon: 0.0736
+      3. Woodenspoon: 0.0000
+
+10. FAILED PREDICTION
+   Filename: Spoon\tablespoon_13_png.rf.498d847be6e622ab1e26a9aa66f51720_0.jpg
+   True Class: Spoon
+   Predicted Class: Dinnerknife
+   Prediction Confidence: 0.4956
+   True Class Probability: 0.2325
+   Top 3 Predictions:
+      1. Dinnerknife: 0.4956
+      2. Spoon: 0.2325
+      3. Ladle: 0.0959
+
+11. FAILED PREDICTION
+   Filename: Spoon\tablespoon_20_jpg.rf.5357394bfa1e47771a225134a0de6a80_0.jpg
+   True Class: Spoon
+   Predicted Class: Teaspoon
+   Prediction Confidence: 0.9627
+   True Class Probability: 0.0250
+   Top 3 Predictions:
+      1. Teaspoon: 0.9627
+      2. Spoon: 0.0250
+      3. Dinnerknife: 0.0049
+
+12. FAILED PREDICTION
+   Filename: Spoon\tablespoon_48_jpg.rf.0e95fd9a579a454d861a078e62bce487_0.jpg
+   True Class: Spoon
+   Predicted Class: Teaspoon
+   Prediction Confidence: 0.5145
+   True Class Probability: 0.0881
+   Top 3 Predictions:
+      1. Teaspoon: 0.5145
+      2. Dinnerfork: 0.2511
+      3. Spoon: 0.0881
+
+13. FAILED PREDICTION
+   Filename: Spoon\tablespoon_6_jpg.rf.ed8148f61f7d47c8cad5a965682a0326_0.jpg
+   True Class: Spoon
+   Predicted Class: Pan
+   Prediction Confidence: 0.5145
+   True Class Probability: 0.0744
+   Top 3 Predictions:
+      1. Pan: 0.5145
+      2. Canopener: 0.2305
+      3. Spoon: 0.0744
+
+14. FAILED PREDICTION
+   Filename: Tray\baking_tray_15_jpg.rf.dcf25eaf317512d9efa2bb333d4a0d89_0.jpg
+   True Class: Tray
+   Predicted Class: Peeler
+   Prediction Confidence: 0.5120
+   True Class Probability: 0.2994
+   Top 3 Predictions:
+      1. Peeler: 0.5120
+      2. Tray: 0.2994
+      3. Kitchenknife: 0.0795
+
+15. FAILED PREDICTION
+   Filename: Woodenspoon\woodenspoon_32_jpg.rf.2582024a33ce64f654fe4b96684164d7_0.jpg
+   True Class: Woodenspoon
+   Predicted Class: Fishslice
+   Prediction Confidence: 0.7080
+   True Class Probability: 0.1347
+   Top 3 Predictions:
+      1. Fishslice: 0.7080
+      2. Woodenspoon: 0.1347
+      3. Ladle: 0.1078
+
+16. FAILED PREDICTION
+   Filename: Woodenspoon\woodenspoon_32_jpg.rf.2582024a33ce64f654fe4b96684164d7_2.jpg
+   True Class: Woodenspoon
+   Predicted Class: Fishslice
+   Prediction Confidence: 0.3867
+   True Class Probability: 0.3151
+   Top 3 Predictions:
+      1. Fishslice: 0.3867
+      2. Woodenspoon: 0.3151
+      3. Dinnerknife: 0.1931
+
