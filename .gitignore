@@ -154,3 +154,5 @@ test_*.py
 # Image data
 image_classification/cls_data/
 image_classification/utensils-wp5hm-yolo8/ 
+image_classification/multiclass_data/
+image_classification/combined_data/
