@@ -151,8 +151,21 @@ Thumbs.db
 # Test files
 test_*.py
 
-# Image data
+# Image data and datasets
 image_classification/cls_data/
 image_classification/utensils-wp5hm-yolo8/ 
 image_classification/multiclass_data/
-image_classification/combined_data/
+image_classification/combined_dataset/
+image_classification/multi_object_enhanced/
+
+# Training results and runs
+runs/
+results/
+
+# Large model files (already covered by *.h5 and *.pt above)
+# But being explicit for clarity
+*.weights
+*.onnx
+
+# Cache files
+*.cache
