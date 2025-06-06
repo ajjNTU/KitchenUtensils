@@ -1,0 +1,632 @@
+#!/usr/bin/env python3
+"""
+Enhanced Multi-Object Dataset Creator with Albumentations
+
+Creates realistic multi-object training scenes from single-object YOLO data
+with kitchen-specific augmentations using albumentations.
+"""
+
+import os
+import cv2
+import numpy as np
+import random
+import yaml
+from pathlib import Path
+from typing import List, Tuple, Dict
+from collections import defaultdict
+import argparse
+
+try:
+    import albumentations as A
+    ALBUMENTATIONS_AVAILABLE = True
+except ImportError:
+    ALBUMENTATIONS_AVAILABLE = False
+    print("⚠️  Albumentations not installed. Install with: pip install albumentations")
+
+class EnhancedMultiObjectCreator:
+    def __init__(self, source_yolo_path: str, output_path: str):
+        """Initialize the enhanced multi-object creator."""
+        self.source_path = Path(source_yolo_path)
+        self.output_path = Path(output_path)
+        
+        # Load class configuration
+        with open(self.source_path / 'data.yaml', 'r') as f:
+            self.config = yaml.safe_load(f)
+        self.class_names = self.config['names']
+        
+        print(f"🎨 Enhanced Multi-Object Creator initialized")
+        print(f"   📁 Source: {self.source_path}")
+        print(f"   📁 Output: {self.output_path}")
+        print(f"   🎯 Classes: {len(self.class_names)}")
+        print(f"   🔧 Albumentations: {'✅ Available' if ALBUMENTATIONS_AVAILABLE else '❌ Not available'}")
+        
+        self._setup_output_dirs()
+        self._setup_augmentation()
+    
+    def _setup_output_dirs(self):
+        """Create output directory structure."""
+        for split in ['train', 'valid', 'test']:
+            (self.output_path / split / 'images').mkdir(parents=True, exist_ok=True)
+            (self.output_path / split / 'labels').mkdir(parents=True, exist_ok=True)
+    
+    def _setup_augmentation(self):
+        """Setup albumentations pipeline for kitchen-specific augmentations."""
+        if not ALBUMENTATIONS_AVAILABLE:
+            self.augmentation = None
+            return
+        
+        self.augmentation = A.Compose([
+            # Geometric transformations (light)
+            A.HorizontalFlip(p=0.5),
+            A.ShiftScaleRotate(
+                shift_limit=0.05, 
+                scale_limit=0.1, 
+                rotate_limit=5, 
+                border_mode=cv2.BORDER_REFLECT,
+                p=0.4
+            ),
+            
+            # Kitchen lighting simulation
+            A.OneOf([
+                A.RandomBrightnessContrast(
+                    brightness_limit=0.2, 
+                    contrast_limit=0.2, 
+                    p=1.0
+                ),
+                A.ColorJitter(
+                    brightness=0.15, 
+                    contrast=0.15, 
+                    saturation=0.1, 
+                    hue=0.05, 
+                    p=1.0
+                ),
+                A.RandomGamma(gamma_limit=(90, 110), p=1.0),
+            ], p=0.6),
+            
+            # Realistic effects
+            A.OneOf([
+                A.GaussianBlur(blur_limit=3, p=1.0),
+                A.MotionBlur(blur_limit=3, p=1.0),
+            ], p=0.15),
+            
+            # Kitchen environment effects
+            A.RandomShadow(p=0.1),
+            A.CLAHE(clip_limit=2.0, tile_grid_size=(4, 4), p=0.15),
+            
+        ], bbox_params=A.BboxParams(
+            format='yolo',
+            label_fields=['class_labels'],
+            min_visibility=0.3,  # Keep objects with at least 30% visibility
+            min_area=100,        # Remove very small objects
+        ))
+        
+        print("🔧 Kitchen-specific augmentation pipeline configured")
+    
+    def extract_object_crops(self, split: str = 'train', max_per_class: int = 50):
+        """Extract object crops from YOLO dataset."""
+        print(f"\n🔍 Extracting crops from {split} split...")
+        
+        crops_by_class = defaultdict(list)
+        images_dir = self.source_path / split / 'images'
+        labels_dir = self.source_path / split / 'labels'
+        
+        if not images_dir.exists():
+            print(f"❌ {images_dir} not found")
+            return {}
+        
+        image_files = list(images_dir.glob('*.jpg')) + list(images_dir.glob('*.png'))
+        
+        for img_path in image_files[:300]:  # Process more images for better variety
+            label_path = labels_dir / f"{img_path.stem}.txt"
+            if not label_path.exists():
+                continue
+            
+            # Load image
+            image = cv2.imread(str(img_path))
+            if image is None:
+                continue
+            
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert to RGB
+            h, w = image.shape[:2]
+            
+            # Read YOLO annotations
+            with open(label_path, 'r') as f:
+                for line in f:
+                    parts = line.strip().split()
+                    if len(parts) < 5:
+                        continue
+                    
+                    class_id = int(parts[0])
+                    if class_id >= len(self.class_names):
+                        continue
+                    
+                    class_name = self.class_names[class_id]
+                    
+                    # Skip if we have enough crops for this class
+                    if len(crops_by_class[class_name]) >= max_per_class:
+                        continue
+                    
+                    # Parse YOLO bbox
+                    x_center, y_center, width, height = map(float, parts[1:5])
+                    
+                    # Convert to pixel coordinates with padding
+                    padding = 0.2  # 20% padding for better object extraction
+                    x_center_px = x_center * w
+                    y_center_px = y_center * h
+                    width_px = width * w * (1 + padding)
+                    height_px = height * h * (1 + padding)
+                    
+                    x1 = max(0, int(x_center_px - width_px / 2))
+                    y1 = max(0, int(y_center_px - height_px / 2))
+                    x2 = min(w, int(x_center_px + width_px / 2))
+                    y2 = min(h, int(y_center_px + height_px / 2))
+                    
+                    # Extract crop
+                    if x2 > x1 and y2 > y1 and (x2-x1) > 40 and (y2-y1) > 40:
+                        crop = image[y1:y2, x1:x2]
+                        
+                        # Apply simple background removal (optional)
+                        crop = self._enhance_object_crop(crop)
+                        
+                        crops_by_class[class_name].append({
+                            'image': crop,
+                            'class_id': class_id,
+                            'class_name': class_name,
+                            'area': (x2-x1) * (y2-y1),
+                            'aspect_ratio': (x2-x1) / (y2-y1)
+                        })
+        
+        # Sort by area and quality
+        for class_name in crops_by_class:
+            crops_by_class[class_name].sort(key=lambda x: x['area'], reverse=True)
+        
+        print("✅ Extracted crops:")
+        for class_name, crops in crops_by_class.items():
+            print(f"   {class_name}: {len(crops)}")
+        
+        return crops_by_class
+    
+    def _enhance_object_crop(self, crop: np.ndarray) -> np.ndarray:
+        """Apply simple enhancement to object crops."""
+        # Simple contrast enhancement
+        lab = cv2.cvtColor(crop, cv2.COLOR_RGB2LAB)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(2, 2))
+        l = clahe.apply(l)
+        enhanced = cv2.merge([l, a, b])
+        enhanced = cv2.cvtColor(enhanced, cv2.COLOR_LAB2RGB)
+        return enhanced
+    
+    def create_kitchen_backgrounds(self, size: Tuple[int, int] = (640, 640)):
+        """Create realistic kitchen background variations."""
+        w, h = size
+        backgrounds = []
+        
+        # Kitchen countertop colors
+        kitchen_colors = [
+            [245, 245, 240],  # White marble
+            [230, 225, 220],  # Light granite
+            [210, 200, 190],  # Beige quartz
+            [190, 175, 160],  # Wood butcher block
+            [200, 195, 190],  # Gray concrete
+            [220, 210, 195],  # Cream ceramic
+        ]
+        
+        for color in kitchen_colors:
+            # Solid color background
+            bg = np.full((h, w, 3), color, dtype=np.uint8)
+            backgrounds.append(bg)
+            
+            # Add subtle texture
+            noise = np.random.normal(0, 5, (h, w, 3)).astype(np.int16)
+            textured_bg = np.clip(bg.astype(np.int16) + noise, 0, 255).astype(np.uint8)
+            backgrounds.append(textured_bg)
+        
+        # Gradient backgrounds (overhead lighting simulation)
+        for color in kitchen_colors[:3]:
+            bg = np.zeros((h, w, 3), dtype=np.uint8)
+            for i in range(h):
+                # Simulate overhead lighting gradient
+                ratio = (i / h) * 0.3 + 0.85  # Lighter at top
+                blend_color = [int(c * ratio) for c in color]
+                bg[i, :] = blend_color
+            backgrounds.append(bg)
+        
+        print(f"📸 Created {len(backgrounds)} kitchen-style backgrounds")
+        return backgrounds
+    
+    def place_objects_realistic(self, objects: List[Dict], scene_size: Tuple[int, int]):
+        """Realistic object placement with kitchen-specific rules."""
+        w, h = scene_size
+        placements = []
+        occupied_areas = []
+        
+        # Kitchen utensil placement rules
+        size_groups = {
+            'large': ['Pan', 'Saucepan', 'Tray', 'Choppingboard', 'Bowl'],
+            'medium': ['Whisk', 'Ladle', 'Tongs', 'Colander', 'Blender'],
+            'small': ['Spoon', 'Fork', 'Teaspoon', 'Dinnerknife', 'Dinnerfork', 'Peeler']
+        }
+        
+        # Sort objects by size category
+        def get_size_category(obj):
+            class_name = obj['class_name']
+            for category, items in size_groups.items():
+                if class_name in items:
+                    if category == 'large':
+                        return 0
+                    elif category == 'medium':
+                        return 1
+                    else:
+                        return 2
+            return 1  # Default to medium
+        
+        objects = sorted(objects, key=get_size_category)
+        
+        for i, obj in enumerate(objects):
+            # Scale based on object type and position
+            class_name = obj['class_name']
+            
+            # Determine scale based on kitchen logic
+            if class_name in size_groups['large']:
+                scale = random.uniform(0.6, 0.9)
+            elif class_name in size_groups['medium']:
+                scale = random.uniform(0.4, 0.7)
+            else:  # small items
+                scale = random.uniform(0.3, 0.6)
+            
+            # Add some random variation
+            scale *= random.uniform(0.9, 1.1)
+            
+            obj_h, obj_w = obj['image'].shape[:2]
+            new_w = int(obj_w * scale)
+            new_h = int(obj_h * scale)
+            
+            # Find realistic position
+            attempts = 0
+            placed = False
+            
+            while attempts < 60 and not placed:
+                # Bias placement towards center for larger items
+                if class_name in size_groups['large']:
+                    center_bias = 0.7
+                    margin = 40
+                else:
+                    center_bias = 0.3
+                    margin = 20
+                
+                if random.random() < center_bias:
+                    # Center-biased placement
+                    center_x = w // 2
+                    center_y = h // 2
+                    x = int(center_x + random.randint(-w//4, w//4) - new_w//2)
+                    y = int(center_y + random.randint(-h//4, h//4) - new_h//2)
+                else:
+                    # Random placement
+                    x = random.randint(margin, max(margin, w - new_w - margin))
+                    y = random.randint(margin, max(margin, h - new_h - margin))
+                
+                # Ensure bounds
+                x = max(margin, min(x, w - new_w - margin))
+                y = max(margin, min(y, h - new_h - margin))
+                
+                # Check overlap
+                new_area = {'x1': x, 'y1': y, 'x2': x + new_w, 'y2': y + new_h}
+                
+                overlap = False
+                for existing in occupied_areas:
+                    if self._areas_overlap(new_area, existing, threshold=0.15):
+                        overlap = True
+                        break
+                
+                if not overlap:
+                    placements.append({
+                        'object': obj,
+                        'x': x, 'y': y,
+                        'width': new_w, 'height': new_h,
+                        'scale': scale
+                    })
+                    occupied_areas.append(new_area)
+                    placed = True
+                
+                attempts += 1
+            
+            if not placed:
+                print(f"⚠️  Could not place {class_name}")
+        
+        return placements
+    
+    def _areas_overlap(self, area1: Dict, area2: Dict, threshold: float = 0.2) -> bool:
+        """Check if two areas overlap significantly."""
+        x_overlap = max(0, min(area1['x2'], area2['x2']) - max(area1['x1'], area2['x1']))
+        y_overlap = max(0, min(area1['y2'], area2['y2']) - max(area1['y1'], area2['y1']))
+        
+        if x_overlap == 0 or y_overlap == 0:
+            return False
+        
+        overlap_area = x_overlap * y_overlap
+        area1_size = (area1['x2'] - area1['x1']) * (area1['y2'] - area1['y1'])
+        area2_size = (area2['x2'] - area2['x1']) * (area2['y2'] - area2['y1'])
+        
+        min_area = min(area1_size, area2_size)
+        return overlap_area > threshold * min_area
+    
+    def compose_scene_enhanced(self, objects: List[Dict], background: np.ndarray):
+        """Compose multi-object scene with enhanced blending."""
+        scene = background.copy()
+        h, w = scene.shape[:2]
+        
+        placements = self.place_objects_realistic(objects, (w, h))
+        annotations = []
+        
+        for placement in placements:
+            obj = placement['object']
+            x, y = placement['x'], placement['y']
+            obj_w, obj_h = placement['width'], placement['height']
+            
+            # Resize object
+            resized_obj = cv2.resize(obj['image'], (obj_w, obj_h))
+            
+            # Enhanced blending with edge smoothing
+            mask = self._create_blend_mask(resized_obj)
+            
+            # Apply blending
+            for c in range(3):
+                scene_region = scene[y:y+obj_h, x:x+obj_w, c]
+                object_region = resized_obj[:, :, c]
+                blended = mask * object_region + (1 - mask) * scene_region
+                scene[y:y+obj_h, x:x+obj_w, c] = blended.astype(np.uint8)
+            
+            # Create YOLO annotation
+            x_center = (x + obj_w / 2) / w
+            y_center = (y + obj_h / 2) / h
+            width_norm = obj_w / w
+            height_norm = obj_h / h
+            
+            annotations.append([
+                obj['class_id'], x_center, y_center, width_norm, height_norm
+            ])
+        
+        return scene, annotations
+    
+    def _create_blend_mask(self, obj_image: np.ndarray) -> np.ndarray:
+        """Create a soft blending mask for realistic object placement."""
+        h, w = obj_image.shape[:2]
+        mask = np.ones((h, w), dtype=np.float32)
+        
+        # Create soft edges
+        edge_width = min(8, min(h, w) // 8)
+        if edge_width > 0:
+            # Top edge
+            for i in range(edge_width):
+                mask[i, :] *= (i + 1) / edge_width * 0.7 + 0.3
+            # Bottom edge
+            for i in range(edge_width):
+                mask[h-1-i, :] *= (i + 1) / edge_width * 0.7 + 0.3
+            # Left edge
+            for i in range(edge_width):
+                mask[:, i] *= (i + 1) / edge_width * 0.7 + 0.3
+            # Right edge
+            for i in range(edge_width):
+                mask[:, w-1-i] *= (i + 1) / edge_width * 0.7 + 0.3
+        
+        return mask
+    
+    def apply_augmentation(self, scene: np.ndarray, annotations: List):
+        """Apply albumentations augmentation if available."""
+        if not ALBUMENTATIONS_AVAILABLE or self.augmentation is None:
+            return scene, annotations
+        
+        try:
+            # Convert annotations format
+            bboxes = []
+            class_labels = []
+            
+            for ann in annotations:
+                class_id, x_center, y_center, width, height = ann
+                bboxes.append([x_center, y_center, width, height])
+                class_labels.append(int(class_id))
+            
+            # Apply augmentation
+            augmented = self.augmentation(
+                image=scene,
+                bboxes=bboxes,
+                class_labels=class_labels
+            )
+            
+            # Convert back
+            aug_annotations = []
+            for bbox, class_id in zip(augmented['bboxes'], augmented['class_labels']):
+                x_center, y_center, width, height = bbox
+                aug_annotations.append([class_id, x_center, y_center, width, height])
+            
+            return augmented['image'], aug_annotations
+            
+        except Exception as e:
+            print(f"⚠️  Augmentation failed: {e}")
+            return scene, annotations
+    
+    def generate_dataset(self, num_scenes: int = 800, objects_per_scene: Tuple[int, int] = (2, 5)):
+        """Generate enhanced multi-object dataset."""
+        print(f"\n🎨 Generating {num_scenes} enhanced multi-object scenes...")
+        
+        # Extract crops with better variety
+        crops_by_class = self.extract_object_crops('train', max_per_class=40)
+        
+        if not crops_by_class:
+            print("❌ No crops extracted")
+            return
+        
+        # Create kitchen backgrounds
+        backgrounds = self.create_kitchen_backgrounds()
+        
+        # Split ratios
+        splits = {
+            'train': int(num_scenes * 0.7),
+            'valid': int(num_scenes * 0.2),
+            'test': int(num_scenes * 0.1)
+        }
+        
+        scene_count = 0
+        successful_scenes = {'train': 0, 'valid': 0, 'test': 0}
+        
+        for split, target_count in splits.items():
+            print(f"\n📦 Creating {target_count} scenes for {split} split...")
+            
+            created_count = 0
+            attempts = 0
+            max_attempts = target_count * 2  # Allow more attempts
+            
+            while created_count < target_count and attempts < max_attempts:
+                try:
+                    # Select objects with better variety
+                    num_objects = random.randint(*objects_per_scene)
+                    selected_objects = self._select_diverse_objects(crops_by_class, num_objects)
+                    
+                    if len(selected_objects) < 2:
+                        attempts += 1
+                        continue
+                    
+                    # Compose scene
+                    background = random.choice(backgrounds).copy()
+                    scene, annotations = self.compose_scene_enhanced(selected_objects, background)
+                    
+                    if len(annotations) < 2:
+                        attempts += 1
+                        continue
+                    
+                    # Apply augmentation
+                    scene_aug, annotations_aug = self.apply_augmentation(scene, annotations)
+                    
+                    if len(annotations_aug) < 2:
+                        attempts += 1
+                        continue
+                    
+                    # Save scene
+                    filename = f"multi_{split}_{created_count:06d}.jpg"
+                    self._save_scene(scene_aug, annotations_aug, filename, split)
+                    
+                    created_count += 1
+                    scene_count += 1
+                    successful_scenes[split] += 1
+                    
+                    if created_count % 25 == 0:
+                        print(f"   ✅ {created_count}/{target_count} scenes created")
+                
+                except Exception as e:
+                    print(f"⚠️  Error creating scene: {e}")
+                
+                attempts += 1
+        
+        # Create config file
+        self._create_config()
+        
+        print(f"\n🎉 Enhanced dataset creation complete!")
+        print(f"   📊 Total scenes: {scene_count}")
+        for split, count in successful_scenes.items():
+            print(f"   {split}: {count} scenes")
+        print(f"   📁 Output: {self.output_path}")
+    
+    def _select_diverse_objects(self, crops_by_class: Dict, num_objects: int) -> List[Dict]:
+        """Select diverse objects with realistic combinations."""
+        available_classes = [cls for cls, crops in crops_by_class.items() if crops]
+        
+        if len(available_classes) < 2:
+            return []
+        
+        # Kitchen utensil grouping preferences
+        groupings = {
+            'utensil_set': ['Dinnerfork', 'Dinnerknife', 'Spoon'],
+            'cooking_tools': ['Whisk', 'Ladle', 'Tongs', 'Woodenspoon'],
+            'prep_tools': ['Kitchenknife', 'Choppingboard', 'Peeler'],
+            'containers': ['Bowl', 'Cup', 'Saucepan', 'Pan']
+        }
+        
+        selected_objects = []
+        used_classes = set()
+        
+        # Occasionally use groupings
+        if random.random() < 0.3 and num_objects >= 2:
+            for group_name, group_classes in groupings.items():
+                available_in_group = [cls for cls in group_classes if cls in available_classes]
+                if len(available_in_group) >= 2 and len(selected_objects) < num_objects - 1:
+                    # Add 2 items from this group
+                    for _ in range(min(2, num_objects - len(selected_objects))):
+                        if available_in_group:
+                            class_name = random.choice(available_in_group)
+                            obj = random.choice(crops_by_class[class_name])
+                            selected_objects.append(obj)
+                            used_classes.add(class_name)
+                            available_in_group.remove(class_name)
+                    break
+        
+        # Fill remaining slots with diverse objects
+        while len(selected_objects) < num_objects:
+            # Prefer classes not yet used
+            available = [cls for cls in available_classes if cls not in used_classes]
+            if not available:
+                available = available_classes
+            
+            if not available:
+                break
+                
+            class_name = random.choice(available)
+            obj = random.choice(crops_by_class[class_name])
+            selected_objects.append(obj)
+            used_classes.add(class_name)
+        
+        return selected_objects
+    
+    def _save_scene(self, scene: np.ndarray, annotations: List, filename: str, split: str):
+        """Save scene and annotations."""
+        # Convert RGB back to BGR for OpenCV
+        scene_bgr = cv2.cvtColor(scene, cv2.COLOR_RGB2BGR)
+        
+        # Save image
+        img_path = self.output_path / split / 'images' / filename
+        cv2.imwrite(str(img_path), scene_bgr)
+        
+        # Save labels
+        label_path = self.output_path / split / 'labels' / f"{Path(filename).stem}.txt"
+        with open(label_path, 'w') as f:
+            for ann in annotations:
+                class_id, x_center, y_center, width, height = ann
+                f.write(f"{class_id} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}\n")
+    
+    def _create_config(self):
+        """Create data.yaml for the multi-object dataset."""
+        config = {
+            'train': str(self.output_path / 'train' / 'images'),
+            'val': str(self.output_path / 'valid' / 'images'),
+            'test': str(self.output_path / 'test' / 'images'),
+            'nc': len(self.class_names),
+            'names': self.class_names
+        }
+        
+        with open(self.output_path / 'data.yaml', 'w') as f:
+            yaml.dump(config, f, default_flow_style=False)
+        
+        print(f"📋 Enhanced config saved: {self.output_path / 'data.yaml'}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Create enhanced multi-object YOLO dataset')
+    parser.add_argument('--source', default='image_classification/utensils-wp5hm-yolo8',
+                       help='Source YOLO dataset path')
+    parser.add_argument('--output', default='image_classification/multi_object_enhanced',
+                       help='Output path for multi-object dataset')
+    parser.add_argument('--scenes', type=int, default=800,
+                       help='Number of scenes to generate')
+    parser.add_argument('--objects', type=int, nargs=2, default=[2, 5],
+                       help='Min and max objects per scene')
+    
+    args = parser.parse_args()
+    
+    creator = EnhancedMultiObjectCreator(args.source, args.output)
+    creator.generate_dataset(
+        num_scenes=args.scenes,
+        objects_per_scene=tuple(args.objects)
+    )
+
+if __name__ == "__main__":
+    main() 
