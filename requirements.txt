@@ -9,5 +9,7 @@ scikit-learn==1.3.*
 pyspellchecker==0.8.3
 tensorflow==2.15.*
 pillow==10.0.*
+matplotlib==3.7.*
+pyyaml==6.0.*
 
 # Note: After pip install, run: python -m spacy download en_core_web_md 

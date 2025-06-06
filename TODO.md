@@ -69,23 +69,27 @@
 - ✅ Use scripts/crop_yolo_to_classification.py to generate CNN crops from YOLO labels
 - ✅ Confirm dataset splits and counts with scripts/count_split_images.py
 
-## Milestone 7: Custom CNN Image Classifier
-- [ ] Use transfer learning (e.g., MobileNetV3 or EfficientNet-B0) for utensil classification
-- [ ] Apply augmentations: flips, rotations, color jitter
-- [ ] Train on cls_data/ (single-label, one crop per object)
-- [ ] Save model as utensils_cnn.h5 and log model.summary()
-- [ ] Evaluate: accuracy, per-class F1, confusion matrix (sklearn)
-- [ ] Document model architecture, training, and results
-- [ ] Integrate into chatbot: on "What is in this image?" prompt for file/URL, run classifier, return result
-- [ ] Add AIML tag and main loop handler for image queries
+## Milestone 7: Custom CNN Image Classifier ✅ COMPLETE
+- ✅ Use transfer learning (ResNet50V2 - upgraded from MobileNetV3) for utensil classification
+- ✅ Apply augmentations: flips, rotations, width/height shifts, zoom
+- ✅ Train on cls_data/ (single-label, one crop per object) - 15 epochs
+- ✅ Save model as cnn_model.h5 and document model architecture
+- ✅ Evaluate: 96.73% test accuracy, confusion matrix, per-class analysis
+- ✅ Document model architecture, training, and optimization journey (CNN_OPTIMIZATION_JOURNEY.md)
+- ✅ Integrate into chatbot: "What is in this image?" opens file dialog, runs classifier, returns results
+- ✅ Add main loop handler for both "image: path" syntax and natural language trigger
+- ✅ CNN optimization complete - conservative parameter tuning achieved optimal performance
 
-## Milestone 8: YOLOv8 Object Detection
-- [ ] Train YOLOv8 on utensils-wp5hm-yolo8/ (detection format)
-- [ ] Save weights as utensils_yolov8.pt
-- [ ] Ensure class mapping matches chatbot labels
-- [ ] Integrate YOLO into chatbot: allow user to select image, run detection, return list of detected utensils and confidences
-- [ ] Optionally, save/display annotated image
-- [ ] Compare YOLO mAP@0.5 to CNN accuracy, document runtime and results
+## Milestone 8: YOLOv8 Object Detection ✅ COMPLETE
+- ✅ Train YOLOv8 on utensils-wp5hm-yolo8/ (detection format) - YOLOv8-small, 100 epochs, 2.15 hours on GTX 1080 Ti
+- ✅ Save weights as runs/detect/train/weights/best.pt
+- ✅ Ensure class mapping matches chatbot labels (21 classes)
+- ✅ Integrate YOLO into chatbot: "Detect everything in this image" opens file dialog, runs detection, returns list of detected utensils and confidences
+- ✅ Save/display annotated image with bounding boxes and confidence scores
+- ✅ Compare YOLO mAP@0.5 to CNN accuracy: YOLO 97.2% mAP50 vs CNN 96.73% accuracy
+- ✅ Document training results: Test set performance 97.2% mAP50, 73.8% mAP50-95, 95.7% precision, 94.7% recall
+- ✅ Separate trigger phrases: "What is in this image?" (CNN) vs "Detect everything in this image" (YOLO)
+- ✅ PyTorch 2.6 compatibility fixes for model loading
 
 ## Milestone 9: Polish, Tests, and Documentation
 - [ ] Add unit tests for cnn.predict() and yolo.detect() with sample images
@@ -96,7 +100,7 @@
 
 ---
 
-**Current Status:** Milestone 6 (vision stub & dataset prep) complete. Datasets for both CNN and YOLO are present and verified. Scripts for conversion and counting are in scripts/. Dataset citation added.
+**Current Status:** Milestone 8 (YOLOv8 Object Detection) complete with 97.2% mAP50 and full chatbot integration. Dual vision system implemented: CNN for single-object classification ("What is in this image?") and YOLO for multi-object detection ("Detect everything in this image"). Both models trained on kitchen utensils dataset with excellent performance. Ready for Milestone 9 (Polish & Documentation).
 
 **Key Decisions & Considerations:**
 - Fallback chain: AIML → TF-IDF → Embedding → Logic → Vision; each module only triggers if previous fails/confidence is low
@@ -111,4 +115,8 @@
 - Fuzzy safety label is robust to Simpful API changes (dual-path logic: uses fuzzy memberships if available, falls back to crisp value thresholds if not)
 - All logic/fuzzy queries are routed before NLP for clarity and demo reliability
 - Demo utensils: kitchenknife (low safety), woodenspoon (high safety), ladle (moderate safety)
-- Debug output for transparency and testing 
+- Debug output for transparency and testing
+- Enhanced image input interface: dual approach with "image: path" syntax and "What is in this image?" natural language trigger
+- CNN image classification: ResNet50V2 with 96.73% test accuracy, optimized through conservative parameter tuning
+- File dialog integration with tkinter for user-friendly image selection
+- Comprehensive model evaluation and visualization tools in scripts/ and results/ 

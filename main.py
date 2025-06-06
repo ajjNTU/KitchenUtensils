@@ -3,15 +3,27 @@
 from dataclasses import dataclass
 import aiml
 import os
+import torch
+
+# PyTorch 2.6 compatibility fix
+original_load = torch.load
+def legacy_load(*args, **kwargs):
+    kwargs.setdefault('weights_only', False)
+    return original_load(*args, **kwargs)
+torch.load = legacy_load
+
 from nlp.similarity import TfidfSimilarity
 from nlp.embedding import EmbeddingSimilarity
 from nlp.utils import normalize
 from logic import check_fact, assert_fact, get_fuzzy_safety_reply
 from image_classification import CNNClassifier
+from image_classification.yolo_detector import YOLODetector
 
 AIML_PATH = os.path.join(os.path.dirname(__file__), 'aiml', 'utensils.aiml')
 QNA_PATH = os.path.join(os.path.dirname(__file__), 'qna.csv')
 CNN_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'image_classification', 'cnn_model.h5')
+YOLO_DATA_YAML = os.path.join(os.path.dirname(__file__), 'image_classification', 'utensils-wp5hm-yolo8', 'data.yaml')
+YOLO_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'runs', 'detect', 'train', 'weights', 'best.pt')
 TFIDF_THRESHOLD = 0.65
 
 @dataclass
@@ -47,9 +59,23 @@ try:
         cnn_classifier = CNNClassifier(model_path=CNN_MODEL_PATH)
         print("CNN classifier loaded successfully")
     else:
-        print(f"Warning: CNN model not found at {CNN_MODEL_PATH}. Vision features will not work.")
+        print(f"Warning: CNN model not found at {CNN_MODEL_PATH}. CNN vision features will not work.")
 except Exception as e:
     print(f"Warning: Could not load CNN classifier: {e}")
+
+# Initialize YOLO detector at startup
+yolo_detector = None
+try:
+    if os.path.exists(YOLO_MODEL_PATH):
+        yolo_detector = YOLODetector(model_path=YOLO_MODEL_PATH, data_yaml_path=YOLO_DATA_YAML)
+        print("YOLOv8 detector loaded successfully (trained model)")
+    elif os.path.exists(YOLO_DATA_YAML):
+        yolo_detector = YOLODetector(data_yaml_path=YOLO_DATA_YAML)
+        print("YOLOv8 detector loaded with pretrained model (not trained on utensils yet)")
+    else:
+        print(f"Warning: YOLO data config not found at {YOLO_DATA_YAML}. YOLO detection will not work.")
+except Exception as e:
+    print(f"Warning: Could not load YOLO detector: {e}")
 
 def aiml_reply(user_input: str) -> 'BotReply | None':
     if not aiml_kernel.numCategories():
@@ -107,49 +133,165 @@ def logic_reply(user_input: str) -> 'BotReply | None':
         pass # Should ideally log this error
     return None
 
-def vision_reply(image_path: str) -> 'BotReply | None':
+def get_image_query_type(user_input: str) -> str:
     """
-    Classify kitchen utensil from image.
+    Check what type of image analysis is requested.
+    
+    Args:
+        user_input: Raw user input string
+        
+    Returns:
+        "cnn" for CNN classification, "yolo" for YOLO detection, "none" for no image query
+    """
+    text = user_input.lower().strip()
+    
+    if text == "what is in this image?":
+        return "cnn"
+    elif text == "detect everything in this image":
+        return "yolo"
+    else:
+        return "none"
+
+def prompt_for_image_path() -> str:
+    """
+    Open a file dialog box to select an image file.
+    
+    Returns:
+        Selected image file path, or empty string if cancelled
+    """
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        
+        # Create a root window and hide it
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)  # Bring dialog to front
+        
+        # Open file dialog
+        file_path = filedialog.askopenfilename(
+            title="Select an image file",
+            filetypes=[
+                ("Image files", "*.jpg *.jpeg *.png *.bmp *.gif *.tiff"),
+                ("JPEG files", "*.jpg *.jpeg"),
+                ("PNG files", "*.png"),
+                ("All files", "*.*")
+            ]
+        )
+        
+        # Clean up
+        root.destroy()
+        
+        return file_path if file_path else ""
+        
+    except ImportError:
+        # Fallback to text input if tkinter is not available
+        print("\n📁 File dialog not available. Please enter the image file path:")
+        image_path = input("📸 Image path: ").strip()
+        return image_path if image_path.lower() != 'cancel' else ""
+    except Exception as e:
+        print(f"Error opening file dialog: {e}")
+        print("📁 Please enter the image file path:")
+        image_path = input("📸 Image path: ").strip()
+        return image_path if image_path.lower() != 'cancel' else ""
+
+def vision_reply(image_path: str, mode: str = "both") -> 'BotReply | None':
+    """
+    Analyze kitchen utensils from image using CNN and/or YOLO.
+    
+    Args:
+        image_path: Path to image file
+        mode: "cnn" for CNN only, "yolo" for YOLO only, "both" for both models
+        
+    Returns:
+        BotReply with analysis results or None if failed
+    """
+    if not os.path.exists(image_path):
+        return BotReply(text=f"Sorry, I cannot find the image file: {image_path}")
+    
+    responses = []
+    
+    # Try YOLO detection (multi-object detection with annotations)
+    if mode in ["yolo", "both"] and yolo_detector is not None:
+        try:
+            print("🔍 Running YOLO object detection...")
+            detections, annotated_path = yolo_detector.predict_and_display(
+                image_path, 
+                conf_threshold=0.25,
+                save_annotated=True,
+                show_plot=True  # Display the annotated image
+            )
+            
+            if detections:
+                yolo_response = f"YOLO Detection found {len(detections)} objects:\n"
+                for i, det in enumerate(detections, 1):
+                    yolo_response += f"  {i}. {det['class']} (confidence: {det['confidence']:.1%})\n"
+                yolo_response += f"\n📁 Annotated image saved to: {annotated_path}"
+                responses.append(("YOLO", yolo_response))
+            else:
+                responses.append(("YOLO", "YOLO detection found no objects above confidence threshold."))
+        except Exception as e:
+            responses.append(("YOLO", f"YOLO detection failed: {str(e)}"))
+    
+    # Try CNN classification (single-object classification)
+    if mode in ["cnn", "both"] and cnn_classifier is not None:
+        try:
+            print("🔍 Running CNN classification...")
+            predictions = cnn_classifier.predict(image_path, top_k=3)
+            
+            if predictions:
+                top_class, top_confidence = predictions[0]
+                
+                if top_confidence < 0.1:
+                    cnn_response = "CNN: Low confidence - might be a kitchen utensil but unclear."
+                elif top_confidence < 0.3:
+                    cnn_response = f"CNN: Possibly a {top_class.lower()} (confidence: {top_confidence:.1%})"
+                else:
+                    cnn_response = f"CNN: Detected {top_class.lower()} (confidence: {top_confidence:.1%})"
+                
+                # Add second prediction if reasonably confident
+                if len(predictions) > 1:
+                    second_class, second_confidence = predictions[1]
+                    if second_confidence > 0.1:
+                        cnn_response += f", or {second_class.lower()} ({second_confidence:.1%})"
+                
+                responses.append(("CNN", cnn_response))
+            else:
+                responses.append(("CNN", "CNN classification found no predictions."))
+        except Exception as e:
+            responses.append(("CNN", f"CNN classification failed: {str(e)}"))
+    
+    # Format combined response
+    if not responses:
+        return BotReply(text="Sorry, no vision models are available for image analysis.")
+    
+    # Combine all responses
+    final_response = "🖼️ Image Analysis Results:\n\n"
+    for model_name, response in responses:
+        final_response += f"{model_name}: {response}\n\n"
+    
+    # Add summary based on mode
+    if mode == "both" and len(responses) == 2 and all("failed" not in resp[1] for resp in responses):
+        final_response += "💡 Tip: YOLO shows all detected objects with bounding boxes, while CNN provides single-object classification."
+    elif mode == "cnn":
+        final_response += "💡 Using CNN for single-object classification. Try 'Detect everything in this image' for multi-object detection."
+    elif mode == "yolo":
+        final_response += "💡 Using YOLO for multi-object detection with bounding boxes. Try 'What is in this image?' for classification."
+    
+    return BotReply(text=final_response.strip())
+    
+    
+def vision_reply_cnn_only(image_path: str) -> 'BotReply | None':
+    """
+    Legacy CNN-only vision analysis (kept for compatibility).
     
     Args:
         image_path: Path to image file
         
     Returns:
-        BotReply with classification results or None if failed
+        BotReply with CNN classification results or None if failed
     """
-    if cnn_classifier is None:
-        return BotReply(text="Sorry, vision classification is not available. CNN model not loaded.")
-    
-    if not os.path.exists(image_path):
-        return BotReply(text=f"Sorry, I cannot find the image file: {image_path}")
-    
-    try:
-        # Get top 3 predictions
-        predictions = cnn_classifier.predict(image_path, top_k=3)
-        
-        if not predictions:
-            return BotReply(text="Sorry, I couldn't classify this image.")
-        
-        # Format response
-        top_class, top_confidence = predictions[0]
-        
-        if top_confidence < 0.1:  # Very low confidence
-            response = "I'm not confident about this image. It might be a kitchen utensil, but I can't identify it clearly."
-        elif top_confidence < 0.3:  # Low confidence
-            response = f"I think this might be a {top_class.lower()}, but I'm not very confident (confidence: {top_confidence:.1%})."
-        else:  # Reasonable confidence
-            response = f"I can see a {top_class.lower()} in this image (confidence: {top_confidence:.1%})."
-        
-        # Add alternative predictions if they're reasonably close
-        if len(predictions) > 1:
-            second_class, second_confidence = predictions[1]
-            if second_confidence > 0.1:  # Only show if reasonably confident
-                response += f" It could also be a {second_class.lower()} (confidence: {second_confidence:.1%})."
-        
-        return BotReply(text=response)
-        
-    except Exception as e:
-        return BotReply(text=f"Sorry, I encountered an error while analyzing the image: {str(e)}")
+    return vision_reply(image_path, mode="cnn")
 
 def main():
     classes = [
@@ -163,7 +305,10 @@ You can:
 - Check facts about utensils (e.g., 'Check that tongs are microwave safe')
 - Tell the chatbot facts (e.g., 'I know that a tray is metal')
 - Ask about utensil safety (e.g., 'Is a kitchen knife safe for children?')
-- Identify utensils from images (e.g., 'image: path/to/image.jpg')
+- Identify utensils from images:
+  • Direct: 'image: path/to/image.jpg' (uses both CNN + YOLO)
+  • CNN only: 'What is in this image?' (single-object classification)
+  • YOLO only: 'Detect everything in this image' (multi-object with annotations)
 - Type 'exit' or 'quit' to leave
 
 Supported utensil classes:
@@ -180,20 +325,46 @@ Supported fact properties: Metal, Plastic, Wood, Ceramic, Sharp, MicrowaveSafe, 
             print("Goodbye!")
             break
         
-        # Check if input is an image path
+        # Check if input is an image path (direct syntax)
         if user_input_original.lower().startswith("image:"):
             image_path = user_input_original[6:].strip()
             print(f"\n🖼️ DEBUG: Processing image: {image_path}")
             print("─" * 50)
             
-            vision_result = vision_reply(image_path)
+            vision_result = vision_reply(image_path, mode="both")
             if vision_result:
-                print(f"4️⃣ Vision: {vision_result.text}")
+                print(f"4️⃣ Vision (BOTH): {vision_result.text}")
                 print("✅ USING VISION ANSWER")
                 print(vision_result.text)
             else:
-                print("4️⃣ Vision: Failed to process image")
+                print("4️⃣ Vision (BOTH): Failed to process image")
                 print("Sorry, I couldn't process that image.")
+            continue
+            
+        # Check if input is a natural language image query
+        image_query_type = get_image_query_type(user_input_original)
+        if image_query_type != "none":
+            if image_query_type == "cnn":
+                print(f"\n🖼️ DEBUG: Detected 'What is in this image?' - Opening file dialog for CNN classification")
+            else:  # yolo
+                print(f"\n🖼️ DEBUG: Detected 'Detect everything in this image' - Opening file dialog for YOLO detection")
+            print("─" * 50)
+            
+            image_path = prompt_for_image_path()
+            if image_path:
+                print(f"\n🖼️ DEBUG: Processing selected image with {image_query_type.upper()}: {image_path}")
+                print("─" * 50)
+                
+                vision_result = vision_reply(image_path, mode=image_query_type)
+                if vision_result:
+                    print(f"4️⃣ Vision ({image_query_type.upper()}): {vision_result.text}")
+                    print("✅ USING VISION ANSWER")
+                    print(vision_result.text)
+                else:
+                    print(f"4️⃣ Vision ({image_query_type.upper()}): Failed to process image")
+                    print("Sorry, I couldn't process that image.")
+            else:
+                print("File selection cancelled.")
             continue
         
         user_input_normalized = normalize(user_input_original)

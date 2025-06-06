@@ -17,7 +17,10 @@
 - **CNN image classifier OPTIMIZED and COMPLETE**: ResNet50V2 with 96.73% test accuracy
 - **CNN Optimization Journey**: Thorough parameter analysis → Conservative optimization → Validation of diminishing returns
 - **Optimal CNN Parameters**: Learning rate 0.0003, Dense 256 neurons, Dropout 0.3, 224x224 input
-- Image input handling in chatbot (syntax: "image: path/to/image.jpg")
+- **Enhanced image input handling**: Dual approach with direct syntax and natural language trigger
+  - Direct syntax: "image: path/to/image.jpg"
+  - Natural language: "What is in this image?" (opens file dialog box)
+  - Specific phrase trigger with tkinter file dialog and image type filters
 - Vision_reply function with confidence-based responses
 - Complete dataset preparation for both CNN and YOLO approaches
 - Dataset conversion and verification scripts
