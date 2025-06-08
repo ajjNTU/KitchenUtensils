@@ -4,6 +4,37 @@ from dataclasses import dataclass
 import aiml
 import os
 import torch
+import argparse
+
+# Parse command line arguments
+parser = argparse.ArgumentParser(description='Kitchen Utensils Chatbot')
+parser.add_argument('--debug', action='store_true', help='Enable debug mode with detailed routing information')
+args = parser.parse_args()
+
+# Global debug flag
+DEBUG_MODE = args.debug
+
+# Suppress verbose library messages unless in debug mode
+if not DEBUG_MODE:
+    import warnings
+    import logging
+    
+    # Suppress TensorFlow messages
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Only show errors
+    os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'  # Disable oneDNN messages
+    
+    # Suppress TensorFlow warnings
+    warnings.filterwarnings('ignore', category=FutureWarning)
+    warnings.filterwarnings('ignore', category=DeprecationWarning)
+    
+    # Suppress TensorFlow logging
+    logging.getLogger('tensorflow').setLevel(logging.ERROR)
+    
+    # Suppress YOLO/Ultralytics verbose output
+    os.environ['YOLO_VERBOSE'] = 'False'
+    
+    # Suppress simpful messages (if any)
+    logging.getLogger('simpful').setLevel(logging.ERROR)
 
 # PyTorch 2.6 compatibility fix
 original_load = torch.load
@@ -15,7 +46,24 @@ torch.load = legacy_load
 from nlp.similarity import TfidfSimilarity
 from nlp.embedding import EmbeddingSimilarity
 from nlp.utils import normalize
-from logic import check_fact, assert_fact, get_fuzzy_safety_reply
+
+# Import logic module with conditional Simpful banner suppression
+if DEBUG_MODE:
+    from logic import check_fact, assert_fact, get_fuzzy_safety_reply, set_debug_mode
+else:
+    # Suppress Simpful banner in production mode
+    import sys
+    from io import StringIO
+    old_stdout = sys.stdout
+    sys.stdout = StringIO()
+    try:
+        from logic import check_fact, assert_fact, get_fuzzy_safety_reply, set_debug_mode
+    finally:
+        sys.stdout = old_stdout
+
+# Set debug mode for logic engine
+set_debug_mode(DEBUG_MODE)
+
 from image_classification import CNNClassifier
 from image_classification.yolo_detector import YOLODetector
 
@@ -34,23 +82,48 @@ class BotReply:
 # Initialize AIML kernel at startup
 aiml_kernel = aiml.Kernel()
 if os.path.exists(AIML_PATH):
-    aiml_kernel.learn(AIML_PATH)
+    if DEBUG_MODE:
+        aiml_kernel.learn(AIML_PATH)
+    else:
+        # Suppress AIML loading messages in production mode
+        import sys
+        from io import StringIO
+        old_stdout = sys.stdout
+        sys.stdout = StringIO()
+        try:
+            aiml_kernel.learn(AIML_PATH)
+        finally:
+            sys.stdout = old_stdout
 else:
-    print(f"Warning: {AIML_PATH} not found. AIML replies will not work.")
+    if DEBUG_MODE:
+        print(f"Warning: {AIML_PATH} not found. AIML replies will not work.")
 
 # Initialize TF-IDF similarity at startup
 tfidf_sim = None
 try:
     tfidf_sim = TfidfSimilarity(QNA_PATH)
 except Exception as e:
-    print(f"Warning: Could not load TF-IDF similarity: {e}")
+    if DEBUG_MODE:
+        print(f"Warning: Could not load TF-IDF similarity: {e}")
 
 # Initialize embedding similarity at startup
 embed_sim = None
 try:
-    embed_sim = EmbeddingSimilarity(QNA_PATH)
+    if DEBUG_MODE:
+        embed_sim = EmbeddingSimilarity(QNA_PATH)
+    else:
+        # Suppress embedding loading messages in production mode
+        import sys
+        from io import StringIO
+        old_stdout = sys.stdout
+        sys.stdout = StringIO()
+        try:
+            embed_sim = EmbeddingSimilarity(QNA_PATH)
+        finally:
+            sys.stdout = old_stdout
 except Exception as e:
-    print(f"Warning: Could not load embedding similarity: {e}")
+    if DEBUG_MODE:
+        print(f"Warning: Could not load embedding similarity: {e}")
 
 # Initialize CNN classifier at startup
 cnn_classifier = None
@@ -123,8 +196,8 @@ def logic_reply(user_input: str) -> 'BotReply | None':
     try:
         if text.startswith('check that '):
             result = check_fact(user_input)
-            if result and result != "Unknown.":
-                return BotReply(text=result)
+            if result:
+                return BotReply(text=result)  # Return any result including "Unknown."
         elif text.startswith('i know that '):
             result = assert_fact(user_input)
             if result:
@@ -297,11 +370,14 @@ def main():
     classes = [
         "Blender", "Bowl", "Canopener", "Choppingboard", "Colander", "Cup", "Dinnerfork", "Dinnerknife", "Fishslice", "Garlicpress", "Kitchenknife", "Ladle", "Pan", "Peeler", "Saucepan", "Spoon", "Teaspoon", "Tongs", "Tray", "Whisk", "Woodenspoon"
     ]
-    print(f"""
+    
+    # Welcome message based on debug mode
+    if DEBUG_MODE:
+        print(f"""
 Welcome to the Kitchen Utensils Chatbot (Prototype) - DEBUG MODE
 
 You can:
-- Ask about kitchen utensils (e.g., 'What is a spatula?')
+- Ask about kitchen utensils (e.g., 'What is a fishslice?', 'What is a ladle?')
 - Check facts about utensils (e.g., 'Check that tongs are microwave safe')
 - Tell the chatbot facts (e.g., 'I know that a tray is metal')
 - Ask about utensil safety (e.g., 'Is a kitchen knife safe for children?')
@@ -319,6 +395,26 @@ Supported fact properties: Metal, Plastic, Wood, Ceramic, Sharp, MicrowaveSafe, 
 
 [DEBUG MODE: Shows detailed routing decisions and logic engine steps]
 """)
+    else:
+        print(f"""
+Welcome to the Kitchen Utensils Chatbot!
+
+You can:
+- Ask about kitchen utensils (e.g., 'What is a fishslice?', 'What is a ladle?')
+- Check facts about utensils (e.g., 'Check that tongs are microwave safe')
+- Tell the chatbot facts (e.g., 'I know that a tray is metal')
+- Ask about utensil safety (e.g., 'Is a kitchen knife safe for children?')
+- Identify utensils from images:
+  • Direct: 'image: path/to/image.jpg' (uses both CNN + YOLO)
+  • CNN only: 'What is in this image?' (single-object classification)
+  • YOLO only: 'Detect everything in this image' (multi-object with annotations)
+- Type 'exit' or 'quit' to leave
+
+Supported utensil classes:
+{', '.join(classes[:8])}
+{', '.join(classes[8:16])}
+{', '.join(classes[16:])}
+""")
     while True:
         user_input_original = input("> ")
         if user_input_original.lower() in ("exit", "quit"):
@@ -328,72 +424,85 @@ Supported fact properties: Metal, Plastic, Wood, Ceramic, Sharp, MicrowaveSafe, 
         # Check if input is an image path (direct syntax)
         if user_input_original.lower().startswith("image:"):
             image_path = user_input_original[6:].strip()
-            print(f"\n🖼️ DEBUG: Processing image: {image_path}")
-            print("─" * 50)
+            if DEBUG_MODE:
+                print(f"\n🖼️ DEBUG: Processing image: {image_path}")
+                print("─" * 50)
             
             vision_result = vision_reply(image_path, mode="both")
             if vision_result:
-                print(f"4️⃣ Vision (BOTH): {vision_result.text}")
-                print("✅ USING VISION ANSWER")
+                if DEBUG_MODE:
+                    print(f"4️⃣ Vision (BOTH): {vision_result.text}")
+                    print("✅ USING VISION ANSWER")
                 print(vision_result.text)
             else:
-                print("4️⃣ Vision (BOTH): Failed to process image")
+                if DEBUG_MODE:
+                    print("4️⃣ Vision (BOTH): Failed to process image")
                 print("Sorry, I couldn't process that image.")
             continue
             
         # Check if input is a natural language image query
         image_query_type = get_image_query_type(user_input_original)
         if image_query_type != "none":
-            if image_query_type == "cnn":
-                print(f"\n🖼️ DEBUG: Detected 'What is in this image?' - Opening file dialog for CNN classification")
-            else:  # yolo
-                print(f"\n🖼️ DEBUG: Detected 'Detect everything in this image' - Opening file dialog for YOLO detection")
-            print("─" * 50)
+            if DEBUG_MODE:
+                if image_query_type == "cnn":
+                    print(f"\n🖼️ DEBUG: Detected 'What is in this image?' - Opening file dialog for CNN classification")
+                else:  # yolo
+                    print(f"\n🖼️ DEBUG: Detected 'Detect everything in this image' - Opening file dialog for YOLO detection")
+                print("─" * 50)
             
             image_path = prompt_for_image_path()
             if image_path:
-                print(f"\n🖼️ DEBUG: Processing selected image with {image_query_type.upper()}: {image_path}")
-                print("─" * 50)
+                if DEBUG_MODE:
+                    print(f"\n🖼️ DEBUG: Processing selected image with {image_query_type.upper()}: {image_path}")
+                    print("─" * 50)
                 
                 vision_result = vision_reply(image_path, mode=image_query_type)
                 if vision_result:
-                    print(f"4️⃣ Vision ({image_query_type.upper()}): {vision_result.text}")
-                    print("✅ USING VISION ANSWER")
+                    if DEBUG_MODE:
+                        print(f"4️⃣ Vision ({image_query_type.upper()}): {vision_result.text}")
+                        print("✅ USING VISION ANSWER")
                     print(vision_result.text)
                 else:
-                    print(f"4️⃣ Vision ({image_query_type.upper()}): Failed to process image")
+                    if DEBUG_MODE:
+                        print(f"4️⃣ Vision ({image_query_type.upper()}): Failed to process image")
                     print("Sorry, I couldn't process that image.")
             else:
                 print("File selection cancelled.")
             continue
         
         user_input_normalized = normalize(user_input_original)
-        print("\n🔍 DEBUG: Processing normalized input: " + user_input_normalized + ", Original input: " + user_input_original)
-        print("─" * 50)
+        if DEBUG_MODE:
+            print("\n🔍 DEBUG: Processing normalized input: " + user_input_normalized + ", Original input: " + user_input_original)
+            print("─" * 50)
 
         # Step 0: Try Logic/Fuzzy Module first
         # Pass original user input to logic_reply as it might need it for better parsing in get_fuzzy_safety_reply
-        logic_result_obj = logic_reply(user_input_original) 
+        logic_result_obj = logic_reply(user_input_original)
+        
         if logic_result_obj:
-            print(f"0️⃣ Logic/Fuzzy: {logic_result_obj.text}")
-            print("✅ USING LOGIC/FUZZY ANSWER")
+            if DEBUG_MODE:
+                print(f"0️⃣ Logic/Fuzzy: {logic_result_obj.text}")
+                print("✅ USING LOGIC/FUZZY ANSWER")
             print(logic_result_obj.text)
             continue # Skip to next input
         else:
-            print(f"0️⃣ Logic/Fuzzy: No direct logic/fuzzy answer found. Proceeding to NLP pipeline...")
+            if DEBUG_MODE:
+                print(f"0️⃣ Logic/Fuzzy: No direct logic/fuzzy answer found. Proceeding to NLP pipeline...")
 
         # Step 1: AIML (using normalized input)
         aiml_result = aiml_reply(user_input_normalized)
         if aiml_result:
-            print(f"1️⃣ AIML: Found match → {aiml_result.text}")
-            print("✅ USING AIML ANSWER")
+            if DEBUG_MODE:
+                print(f"1️⃣ AIML: Found match → {aiml_result.text}")
+                print("✅ USING AIML ANSWER")
             print(aiml_result.text)
             if aiml_result.end_conversation:
                 print("Goodbye!")
                 break
             continue
         else:
-            print(f"1️⃣ AIML: No match found for input: {user_input_normalized.upper()}")
+            if DEBUG_MODE:
+                print(f"1️⃣ AIML: No match found for input: {user_input_normalized.upper()}")
 
         # Step 2: TF-IDF (using normalized input)
         tfidf_result = tfidf_reply(user_input_normalized)
@@ -407,16 +516,19 @@ Supported fact properties: Metal, Plastic, Wood, Ceramic, Sharp, MicrowaveSafe, 
             all_sims = cosine_similarity(tfidf_sims, tfidf_sim.question_vecs)[0]
             best_idx = all_sims.argmax()
             tfidf_top_answer = tfidf_sim.answers[best_idx]
-            print(f"2️⃣ TF-IDF: Score={tfidf_score:.3f} (threshold={TFIDF_THRESHOLD})")
-            print(f"   Top TF-IDF match → {tfidf_top_answer}")
-            print(f"   Top TF-IDF score: {tfidf_score:.3f}")
+            if DEBUG_MODE:
+                print(f"2️⃣ TF-IDF: Score={tfidf_score:.3f} (threshold={TFIDF_THRESHOLD})")
+                print(f"   Top TF-IDF match → {tfidf_top_answer}")
+                print(f"   Top TF-IDF score: {tfidf_score:.3f}")
             if tfidf_result:
-                print(f"   Found match → {tfidf_result.text}")
-                print("✅ USING TF-IDF ANSWER")
+                if DEBUG_MODE:
+                    print(f"   Found match → {tfidf_result.text}")
+                    print("✅ USING TF-IDF ANSWER")
                 print(tfidf_result.text)
                 answer_found = True
         else:
-            print("2️⃣ TF-IDF: Not available")
+            if DEBUG_MODE:
+                print("2️⃣ TF-IDF: Not available")
         
         # Step 3: Embedding (always show top candidate and score)
         embed_score = None
@@ -427,27 +539,34 @@ Supported fact properties: Metal, Plastic, Wood, Ceramic, Sharp, MicrowaveSafe, 
             similarities = cosine_similarity(user_embedding, embed_sim.question_embeddings)[0]
             best_idx = similarities.argmax()
             embed_top_answer = embed_sim.answers[best_idx]
-            print(f"3️⃣ Embedding: Score={embed_score:.3f}")
-            print(f"   Top Embedding match → {embed_top_answer}")
-            print(f"   Top Embedding score: {embed_score:.3f}")
+            if DEBUG_MODE:
+                print(f"3️⃣ Embedding: Score={embed_score:.3f}")
+                print(f"   Top Embedding match → {embed_top_answer}")
+                print(f"   Top Embedding score: {embed_score:.3f}")
             if not answer_found and tfidf_score is not None and tfidf_score < TFIDF_THRESHOLD:
-                print(f"   TF-IDF not confident ({tfidf_score:.3f} < {TFIDF_THRESHOLD}) → Trying embedding...")
+                if DEBUG_MODE:
+                    print(f"   TF-IDF not confident ({tfidf_score:.3f} < {TFIDF_THRESHOLD}) → Trying embedding...")
                 embed_result = embed_reply(user_input_normalized) # Ensure this uses normalized
                 if embed_result:
-                    print(f"   Found match (≥0.6) → {embed_result.text}")
-                    print("✅ USING EMBEDDING ANSWER")
+                    if DEBUG_MODE:
+                        print(f"   Found match (≥0.6) → {embed_result.text}")
+                        print("✅ USING EMBEDDING ANSWER")
                     print(embed_result.text)
                     answer_found = True
                 else:
-                    print(f"   No match (score < 0.6)")
+                    if DEBUG_MODE:
+                        print(f"   No match (score < 0.6)")
             elif tfidf_score is not None:
-                print(f"   TF-IDF confident ({tfidf_score:.3f} ≥ {TFIDF_THRESHOLD}) → Skipping embedding")
+                if DEBUG_MODE:
+                    print(f"   TF-IDF confident ({tfidf_score:.3f} ≥ {TFIDF_THRESHOLD}) → Skipping embedding")
         else:
-            print("3️⃣ Embedding: Not available")
+            if DEBUG_MODE:
+                print("3️⃣ Embedding: Not available")
         
         # Step 4: Fallback
         if not answer_found:
-            print("5️⃣ Fallback: No matches found")
+            if DEBUG_MODE:
+                print("5️⃣ Fallback: No matches found")
             print("Sorry, I don't know that.")
 
 if __name__ == "__main__":

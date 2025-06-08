@@ -17,6 +17,7 @@ ALIASES: Dict[str, str] = {
     "can opener": "canopener",
     # chopping board
     "cutting board": "choppingboard",
+    "chopping board": "choppingboard",
     "board": "choppingboard",
     # colander
     "strainer": "colander",
@@ -44,6 +45,7 @@ ALIASES: Dict[str, str] = {
     "chef knife": "kitchenknife",
     "chef's knife": "kitchenknife",
     "cook's knife": "kitchenknife",
+    "kitchen knife": "kitchenknife",
     "knives": "kitchenknife",
     "knife": "kitchenknife",
     # ladle
@@ -83,6 +85,7 @@ ALIASES: Dict[str, str] = {
     # wooden spoon
     "wooden stirrer": "woodenspoon",
     "wood spoon": "woodenspoon",
+    "wooden spoon": "woodenspoon",
     "woodenspoon": "woodenspoon",
 }
 

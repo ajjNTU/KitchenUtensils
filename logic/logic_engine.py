@@ -8,6 +8,14 @@ from nltk.inference import ResolutionProver
 from .aliases import canonical_name
 from .fuzzy_safety import safety_score # Import the fuzzy safety score function
 
+# Global debug flag - can be set by main.py
+_DEBUG_MODE = False
+
+def set_debug_mode(debug: bool):
+    """Set debug mode for the logic engine."""
+    global _DEBUG_MODE
+    _DEBUG_MODE = debug
+
 def strip_articles(text: str) -> str:
     # Remove leading articles from a string
     articles = ('a ', 'an ', 'the ')
@@ -46,29 +54,64 @@ def assert_fact(text: str) -> str:
                 return "Sorry, I can only remember facts in the form 'I know that X [is/are/is not/are not] Y' or 'I know that X Y'."
 
         if len(parts) == 2:
-            utensil = canonical_name(strip_articles(parts[0].strip()))
+            subject = strip_articles(parts[0].strip())
             prop = _to_camel_case_prop(parts[1].strip())
-            fol_str = f"{prop}({utensil})"
-            if prop_is_negated:
-                fol_str = f"~{fol_str}"
+            
+            # Check if subject is a material (for universal rules) or specific utensil (for individual facts)
+            known_materials = ['wood', 'metal', 'plastic', 'ceramic']
+            
+            if subject.lower() in known_materials:
+                # Material-based universal rule: "wood is microwave safe" → all x.(Wood(x) -> MicrowaveSafe(x))
+                material = subject.capitalize()  # Wood, Metal, Plastic, Ceramic
+                if prop_is_negated:
+                    fol_str = f"all x.({material}(x) -> ~{prop}(x))"
+                else:
+                    fol_str = f"all x.({material}(x) -> {prop}(x))"
+            else:
+                # Individual fact: "woodenspoon is microwave safe" → MicrowaveSafe(woodenspoon)
+                utensil = canonical_name(subject)
+                fol_str = f"{prop}({utensil})"
+                if prop_is_negated:
+                    fol_str = f"~{fol_str}"
         else:
             return "Sorry, I can only remember facts in the form 'I know that X [is/are/is not/are not] Y'."
 
         try:
             kb = get_kb()
             expr = read_expr(fol_str)
-            # For contradiction, check the opposite form
-            neg_expr_str = f"{prop}({utensil})" if prop_is_negated else f"~{prop}({utensil})"
-            neg_expr = read_expr(neg_expr_str)
             
-            if kb.entails(neg_expr):
-                return f"Sorry, that contradicts what I already know."
+            # For individual facts, check for contradictions
+            if not fol_str.startswith('all x.'):
+                # Individual fact contradiction check
+                neg_expr_str = f"{prop}({canonical_name(subject)})" if prop_is_negated else f"~{prop}({canonical_name(subject)})"
+                neg_expr = read_expr(neg_expr_str)
+                
+                if kb.entails(neg_expr):
+                    return f"Sorry, that contradicts what I already know."
+            # For universal rules, we could add more sophisticated contradiction checking later
+            
             if expr not in kb.facts: # Avoid adding duplicates to in-memory KB
                 kb.facts.append(expr)
-            return f"OK, I'll remember that {parts[0].strip()} {parts[1].strip()}{ ' not' if prop_is_negated else ''}."
+            
+            # Generate appropriate response message
+            if fol_str.startswith('all x.'):
+                return f"OK, I'll remember that {parts[0].strip()} {parts[1].strip()}{ ' not' if prop_is_negated else ''} (as a general rule)."
+            else:
+                return f"OK, I'll remember that {parts[0].strip()} {parts[1].strip()}{ ' not' if prop_is_negated else ''}."
+                
         except Exception as e:
-            # print(f"Error in assert_fact: {e}") # Optional debug
-            return "Sorry, I couldn't process that fact."
+            if _DEBUG_MODE:
+                print(f"Error in assert_fact: {e}")
+            # Provide more specific error message based on the exception
+            error_msg = str(e).lower()
+            if "parse" in error_msg or "syntax" in error_msg:
+                return f"Sorry, I couldn't understand the property '{parts[1].strip()}'. Please use simple properties like 'microwave safe', 'dishwasher safe', etc."
+            elif "contradiction" in error_msg:
+                return "Sorry, that contradicts what I already know."
+            elif "material" in error_msg or "utensil" in error_msg:
+                return f"Sorry, I don't recognise '{parts[0].strip()}' as a known utensil or material."
+            else:
+                return f"Sorry, I couldn't process that fact. Please try rephrasing it as 'I know that [utensil/material] is [property]'."
             
     return "Sorry, I can only remember facts in the form 'I know that X [is/are/is not/are not] Y' or 'I know that X Y'."
 
@@ -82,10 +125,16 @@ def check_fact(text: str) -> str:
         query = read_expr(fol_str)
     except Exception:
         return "Unknown."
-    print("Parsed FOL string:", fol_str)
-    print("Query:", query)
+    
+    if _DEBUG_MODE:
+        print("Parsed FOL string:", fol_str)
+        print("Query:", query)
+    
     neg_query = read_expr("~" + str(query))
-    print("Negated Query:", neg_query)
+    
+    if _DEBUG_MODE:
+        print("Negated Query:", neg_query)
+    
     if kb.entails(query):
         return "Correct."
     if kb.entails(neg_query):
@@ -215,9 +264,11 @@ class FOLKnowledgeBase:
                     self.facts.append(expr)
                 except Exception:
                     continue  # skip lines that can't be parsed
-        print(f"[DEBUG] Loaded {len(self.facts)} FOL facts from {self.kb_path}")
-        for fact in self.facts:
-            print(f"[DEBUG] KB fact: {fact}")
+        
+        if _DEBUG_MODE:
+            print(f"[DEBUG] Loaded {len(self.facts)} FOL facts from {self.kb_path}")
+            for fact in self.facts:
+                print(f"[DEBUG] KB fact: {fact}")
 
     def entails(self, query):
         # Returns True if KB entails the query

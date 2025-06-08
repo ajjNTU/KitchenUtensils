@@ -169,3 +169,6 @@ results/
 
 # Cache files
 *.cache
+image_classification/example_images/annotated/fork_yolo_annotated.jpg
+image_classification/example_images/annotated/peeler_yolo_annotated.jpg
+image_classification/example_images/annotated/PXL_20250606_083919058_yolo_annotated.jpg
