@@ -1,0 +1,13 @@
+train: E:\KitchenUtensils\KitchenUtensils\image_classification\utensils-wp5hm-yolo8\train\images
+val: E:\KitchenUtensils\KitchenUtensils\image_classification\utensils-wp5hm-yolo8\valid\images
+test: E:\KitchenUtensils\KitchenUtensils\image_classification\utensils-wp5hm-yolo8\test\images
+
+nc: 21
+names: ['Blender', 'Bowl', 'Canopener', 'Choppingboard', 'Colander', 'Cup', 'Dinnerfork', 'Dinnerknife', 'Fishslice', 'Garlicpress', 'Kitchenknife', 'Ladle', 'Pan', 'Peeler', 'Saucepan', 'Spoon', 'Teaspoon', 'Tongs', 'Tray', 'Whisk', 'Woodenspoon']
+
+roboflow:
+  workspace: utensils
+  project: utensils-wp5hm
+  version: 10
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/utensils/utensils-wp5hm/dataset/10

@@ -2,9 +2,17 @@ __pycache__/
 .venv/
 *.pyc
 .env
-models/
-*.h5
-*.pt
+
+# IMPORTANT: Essential model files for university assessment are NOT ignored
+# The following model files are required and should be included:
+# - image_classification/cnn_model.h5 (CNN classifier)
+# - image_classification/cnn_model_classes.json (CNN class mapping)
+# - runs/detect/train/weights/best.pt (YOLO weights)
+# - image_classification/utensils-wp5hm-yolo8/data.yaml (YOLO config)
+
+# Exclude other model formats but keep .h5 and .pt for assessment
+*.weights
+*.onnx
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -145,81 +153,40 @@ dmypy.json
 ehthumbs.db
 Thumbs.db
 
-# Embedding cache files
+# Embedding cache files (auto-generated)
 *_embeddings.npy
 
 # Test files
 test_*.py
 
-# Image data and datasets
+# Large training datasets (exclude to save space, but keep essential configs)
 image_classification/cls_data/
-image_classification/utensils-wp5hm-yolo8/ 
 image_classification/multiclass_data/
 image_classification/combined_dataset/
 image_classification/multi_object_enhanced/
 
-# Training results and runs
-runs/
-results/
+# Keep utensils-wp5hm-yolo8/data.yaml but exclude large dataset files
+image_classification/utensils-wp5hm-yolo8/train/
+image_classification/utensils-wp5hm-yolo8/valid/
+image_classification/utensils-wp5hm-yolo8/test/
 
-# Large model files (already covered by *.h5 and *.pt above)
-# But being explicit for clarity
-*.weights
-*.onnx
+# Training results and logs (but keep final model weights)
+results/
+runs/detect/train/weights/last.pt
+runs/detect/train/*.txt
+runs/detect/train/*.yaml
+!runs/detect/train/weights/best.pt
 
 # Cache files
 *.cache
-image_classification/example_images/annotated/fork_yolo_annotated.jpg
-image_classification/example_images/annotated/peeler_yolo_annotated.jpg
-image_classification/example_images/annotated/PXL_20250606_083919058_yolo_annotated.jpg
-kitchen_utensils_chatbot.zip
-test_env/pyvenv.cfg
-test_env/Scripts/activate
-test_env/Scripts/activate.bat
-test_env/Scripts/Activate.ps1
-test_env/Scripts/aiml-bot.exe
-test_env/Scripts/aiml-validate.exe
-test_env/Scripts/cpuinfo.exe
-test_env/Scripts/deactivate.bat
-test_env/Scripts/estimator_ckpt_converter.exe
-test_env/Scripts/f2py.exe
-test_env/Scripts/fonttools.exe
-test_env/Scripts/google-oauthlib-tool.exe
-test_env/Scripts/import_pb_to_tensorboard.exe
-test_env/Scripts/isympy.exe
-test_env/Scripts/markdown_py.exe
-test_env/Scripts/markdown-it.exe
-test_env/Scripts/nltk.exe
-test_env/Scripts/normalizer.exe
-test_env/Scripts/pip.exe
-test_env/Scripts/pip3.10.exe
-test_env/Scripts/pip3.exe
-test_env/Scripts/pyftmerge.exe
-test_env/Scripts/pyftsubset.exe
-test_env/Scripts/pygmentize.exe
-test_env/Scripts/pyrsa-decrypt.exe
-test_env/Scripts/pyrsa-encrypt.exe
-test_env/Scripts/pyrsa-keygen.exe
-test_env/Scripts/pyrsa-priv2pub.exe
-test_env/Scripts/pyrsa-sign.exe
-test_env/Scripts/pyrsa-verify.exe
-test_env/Scripts/python.exe
-test_env/Scripts/pythonw.exe
-test_env/Scripts/saved_model_cli.exe
-test_env/Scripts/spacy.exe
-test_env/Scripts/tensorboard.exe
-test_env/Scripts/tf_upgrade_v2.exe
-test_env/Scripts/tflite_convert.exe
-test_env/Scripts/toco_from_protos.exe
-test_env/Scripts/toco.exe
-test_env/Scripts/torchfrtrace.exe
-test_env/Scripts/torchrun.exe
-test_env/Scripts/tqdm.exe
-test_env/Scripts/ttx.exe
-test_env/Scripts/typer.exe
-test_env/Scripts/ultralytics.exe
-test_env/Scripts/weasel.exe
-test_env/Scripts/wheel.exe
-test_env/Scripts/yolo.exe
-test_env/share/man/man1/isympy.1
-test_env/share/man/man1/ttx.1
+
+# Annotated example images (generated)
+image_classification/example_images/annotated/
+
+# Zip files and test environments
+*.zip
+test_env/
+image_classification/utensils-wp5hm-yolo8/yolov8n.pt
+image_classification/utensils-wp5hm-yolo8/yolov8s.pt
+yolov8n.pt
+yolov8s.pt
