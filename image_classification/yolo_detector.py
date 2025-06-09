@@ -96,7 +96,7 @@ class YOLODetector:
     def detect(self, image_path: str, conf_threshold: float = 0.25, 
                iou_threshold: float = 0.45) -> List[Dict[str, Any]]:
         """
-        Detect objects in an image.
+        Detect objects in an image with robust error handling.
         
         Args:
             image_path: Path to input image
@@ -105,34 +105,72 @@ class YOLODetector:
             
         Returns:
             List of detection dictionaries with keys: 'class', 'confidence', 'bbox'
+            Returns empty list if detection fails
         """
-        if not os.path.exists(image_path):
-            raise FileNotFoundError(f"Image not found: {image_path}")
-        
-        # Run inference
-        results = self.model(image_path, conf=conf_threshold, iou=iou_threshold)
-        
-        detections = []
-        for result in results:
-            if result.boxes is not None:
-                boxes = result.boxes
-                for i in range(len(boxes)):
-                    # Extract detection information
-                    bbox = boxes.xyxy[i].cpu().numpy()  # [x1, y1, x2, y2]
-                    confidence = float(boxes.conf[i].cpu())
-                    class_id = int(boxes.cls[i].cpu())
-                    
-                    # Get class name
-                    class_name = self.class_names[class_id] if class_id < len(self.class_names) else f"class_{class_id}"
-                    
-                    detections.append({
-                        'class': class_name,
-                        'confidence': confidence,
-                        'bbox': bbox.tolist(),  # [x1, y1, x2, y2]
-                        'class_id': class_id
-                    })
-        
-        return detections
+        try:
+            # Validate image file exists
+            if not os.path.exists(image_path):
+                raise FileNotFoundError(f"Image file not found: {image_path}")
+            
+            # Validate image can be opened
+            try:
+                from PIL import Image
+                test_img = Image.open(image_path)
+                test_img.close()
+            except Exception as e:
+                raise ValueError(f"Cannot open image file (corrupted or invalid format): {e}")
+            
+            # Run inference with error handling
+            try:
+                results = self.model(image_path, conf=conf_threshold, iou=iou_threshold)
+            except Exception as e:
+                raise RuntimeError(f"YOLO inference failed: {e}")
+            
+            detections = []
+            try:
+                for result in results:
+                    if result.boxes is not None:
+                        boxes = result.boxes
+                        for i in range(len(boxes)):
+                            try:
+                                # Extract detection information with validation
+                                bbox = boxes.xyxy[i].cpu().numpy()  # [x1, y1, x2, y2]
+                                confidence = float(boxes.conf[i].cpu())
+                                class_id = int(boxes.cls[i].cpu())
+                                
+                                # Validate detection data
+                                if not (0 <= confidence <= 1):
+                                    continue  # Skip invalid confidence
+                                if class_id < 0:
+                                    continue  # Skip invalid class ID
+                                if len(bbox) != 4:
+                                    continue  # Skip invalid bbox
+                                
+                                # Get class name with fallback
+                                if class_id < len(self.class_names):
+                                    class_name = self.class_names[class_id]
+                                else:
+                                    class_name = f"class_{class_id}"
+                                
+                                detections.append({
+                                    'class': class_name,
+                                    'confidence': confidence,
+                                    'bbox': bbox.tolist(),  # [x1, y1, x2, y2]
+                                    'class_id': class_id
+                                })
+                            except Exception as e:
+                                # Skip this detection but continue with others
+                                print(f"Warning: Skipping invalid detection: {e}")
+                                continue
+            except Exception as e:
+                raise RuntimeError(f"Error processing detection results: {e}")
+            
+            return detections
+            
+        except Exception as e:
+            # Log error and return empty list for graceful degradation
+            print(f"YOLO detection failed for {image_path}: {str(e)}")
+            return []
     
     def display_annotated_image(self, image_path: str, detections: Optional[List[Dict]] = None,
                               conf_threshold: float = 0.25, save_path: Optional[str] = None,
@@ -216,7 +254,7 @@ class YOLODetector:
     def predict_and_display(self, image_path: str, conf_threshold: float = 0.25,
                           save_annotated: bool = True, show_plot: bool = True) -> Tuple[List[Dict], str]:
         """
-        Run detection and display annotated results in one step.
+        Run detection and display annotated results in one step with robust error handling.
         
         Args:
             image_path: Path to input image
@@ -226,24 +264,34 @@ class YOLODetector:
             
         Returns:
             Tuple of (detections, annotated_image_path)
+            Returns ([], "") if processing fails
         """
-        print(f"Processing image: {image_path}")
-        
-        # Run detection
-        detections = self.detect(image_path, conf_threshold=conf_threshold)
-        
-        print(f"Found {len(detections)} objects:")
-        for det in detections:
-            print(f"  - {det['class']}: {det['confidence']:.3f}")
-        
-        # Display annotated image
-        annotated_path = None
-        if save_annotated or show_plot:
-            annotated_path = self.display_annotated_image(
-                image_path, detections, save_path=None, show_plot=show_plot
-            )
-        
-        return detections, annotated_path
+        try:
+            print(f"Processing image: {image_path}")
+            
+            # Run detection with error handling
+            detections = self.detect(image_path, conf_threshold=conf_threshold)
+            
+            print(f"Found {len(detections)} objects:")
+            for det in detections:
+                print(f"  - {det['class']}: {det['confidence']:.3f}")
+            
+            # Display annotated image with error handling
+            annotated_path = ""
+            if save_annotated or show_plot:
+                try:
+                    annotated_path = self.display_annotated_image(
+                        image_path, detections, save_path=None, show_plot=show_plot
+                    )
+                except Exception as e:
+                    print(f"Warning: Could not create annotated image: {e}")
+                    annotated_path = ""
+            
+            return detections, annotated_path
+            
+        except Exception as e:
+            print(f"YOLO predict_and_display failed for {image_path}: {str(e)}")
+            return [], ""
 
 
 def main():

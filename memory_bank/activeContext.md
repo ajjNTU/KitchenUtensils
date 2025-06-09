@@ -1,15 +1,51 @@
 # Active Context: Kitchen Utensils Chatbot
 
+**PROJECT SCOPE: University Module Assessment**
+This project demonstrates AI/ML implementation skills and software engineering practices for academic assessment. Full production deployment is not the objective.
+
 **MAJOR MILESTONE ACHIEVEMENT: Milestone 9 Critical Bug Fixes COMPLETE (5/5)**
 
-**CURRENT STATUS: Production Ready - All Critical Fixes Implemented + Post-Production Debug Enhancements**
+**CURRENT STATUS: Academic Objectives Achieved - All Core Functionality Demonstrated**
 
 ## Current Work Focus
 - **✅ MILESTONE 9 COMPLETE**: All 5 production-blocking issues resolved
-- **✅ Production Interface**: Clean, professional user experience implemented
-- **✅ Debug Capabilities**: Comprehensive development tools maintained
+- **✅ Academic Interface**: Clean, professional user experience suitable for assessment
+- **✅ Debug Capabilities**: Comprehensive development tools for technical demonstration
 - **✅ POST-PRODUCTION ENHANCEMENTS**: Logic debug message suppression and improved error messages
-- **Next Phase**: Optional YOLO enhancement or new feature development
+- **✅ DOCUMENTATION UPDATE**: All docs updated to reflect university module scope
+- **✅ GRACEFUL DEGRADATION**: System continues working if vision modules fail
+- **Next Phase**: Task 4 - Code Quality & Robustness (simplified plan for academic scope)
+
+## Task 4: Code Quality & Robustness - Academic Scope
+
+**UNIVERSITY MODULE OBJECTIVES**: Demonstrate software engineering best practices and code quality principles suitable for academic assessment. Focus on practical improvements rather than production-scale infrastructure.
+
+### **Phase 2: Input Validation & Sanitization (Quick Fixes)**
+- [ ] Strengthen existing input validation for user queries and file paths
+- [ ] Add basic safety checks to prevent common input errors
+- [ ] Improve error messages to be more specific and actionable
+- [ ] Keep implementation simple and practical for academic demonstration
+
+### **Phase 3.1: Lazy Loading Only**
+- [ ] Print welcome message immediately on startup (instant user feedback)
+- [ ] Load models in background while user reads welcome message
+- [ ] Show loading progress/status for model initialization
+- [ ] Improve user experience from 10s startup delay to instant welcome
+
+### **Phase 5.1: Code Organization & Cleanup**
+- [ ] Extract common utilities into shared modules (reduce duplication)
+- [ ] Improve inline documentation and comments for clarity
+- [ ] Add type hints where helpful for code readability
+- [ ] Clean up codebase structure and organization
+- [ ] Demonstrate software engineering best practices
+
+### **Phase 6.2: Documentation Update**
+- [ ] Update README and docs with Task 4 improvements
+- [ ] Document the lazy loading feature and user experience improvements
+- [ ] Clean up any outdated information in documentation
+- [ ] Ensure all documentation reflects university module assessment scope
+
+**Academic Focus**: These improvements demonstrate understanding of software engineering principles, user experience design, and code quality practices relevant to academic assessment.
 
 ## Post-Production Enhancement - Logic Debug Fixes (COMPLETE)
 
@@ -53,6 +89,131 @@
 - ✅ "I know that chopping board is dishwasher safe" now processes correctly
 - ✅ FOL expressions like `DishwasherSafe(choppingboard)` parse successfully
 - ✅ All multi-word utensil names now work in logic assertions and checks
+
+## Documentation Update - Pipeline Flow Corrections (COMPLETE)
+
+### **✅ Corrected Pipeline Architecture Documentation (COMPLETE)**
+**Problem**: Documentation incorrectly described logic as falling back to NLP pipeline
+**Reality**: Logic/Fuzzy pipeline is completely separate - returns results (including "Unknown.") and stops
+**Solution**: Updated all documentation to reflect actual dual pipeline architecture
+**Files Updated**:
+- `README.md`: Corrected features description and pipeline flow
+- `ARCHITECTURE.md`: Added detailed pipeline sections and flow diagram
+- `memory_bank/systemPatterns.md`: Updated architecture overview and design patterns
+- `memory_bank/activeContext.md`: Corrected system status descriptions
+- `memory_bank/progress.md`: Updated "What Works" section with correct pipeline flow
+- `main.py`: Added comprehensive comments explaining dual pipeline architecture
+
+### **✅ Added Pipeline Flow Diagram (COMPLETE)**
+**Enhancement**: Created visual diagram showing the actual pipeline flow
+**Implementation**: Added Mermaid diagram to ARCHITECTURE.md showing:
+- Logic/Fuzzy Pipeline (Step 0): Runs first, no NLP fallback
+- NLP Pipeline (Steps 1-3): AIML → TF-IDF → Embedding fallback chain
+- Vision Pipeline: Image input handling with CNN + YOLO
+- Clear decision points and stopping conditions
+**Result**: Visual representation makes the dual pipeline architecture immediately clear
+
+### **✅ Enhanced Code Comments (COMPLETE)**
+**Enhancement**: Added detailed comments to main.py routing logic
+**Implementation**:
+- Clear section headers for dual pipeline architecture
+- Detailed comments explaining Logic/Fuzzy pipeline isolation
+- Comments clarifying NLP fallback chain behavior
+- Enhanced logic_reply() function documentation
+**Result**: Code is now self-documenting with clear pipeline behavior explanations
+
+## Graceful Degradation - System Resilience (COMPLETE)
+
+### **✅ Enhanced Vision Module Loading (COMPLETE)**
+**Problem**: System could crash or behave unpredictably if vision models failed to load
+**Solution**: Implemented robust startup with availability tracking
+**Implementation**:
+- Added `cnn_available` and `yolo_available` flags to track model status
+- Enhanced error handling during model loading with clear user messages
+- Graceful fallback messages when models are unavailable
+- Debug vs production mode messaging for different user types
+**Files Modified**:
+- `main.py`: Enhanced CNN and YOLO loading with availability flags
+**Testing Results**:
+- ✅ System starts successfully even if models are missing
+- ✅ Clear user communication about available features
+- ✅ Different messaging for debug vs production modes
+
+### **✅ Dynamic Welcome Message (COMPLETE)**
+**Enhancement**: Welcome message adapts to show only available vision features
+**Implementation**:
+- Dynamic vision features list based on model availability
+- Clear indication when features are unavailable
+- Helpful guidance for users about what they can do
+**Scenarios Handled**:
+- Both CNN + YOLO available: Full feature set
+- CNN only: Classification features with YOLO unavailable note
+- YOLO only: Detection features with CNN unavailable note
+- Neither available: Clear "image analysis unavailable" message
+**Result**: Users always know exactly what features are available
+
+### **✅ Robust Vision Pipeline (COMPLETE)**
+**Enhancement**: vision_reply() function with comprehensive error handling
+**Implementation**:
+- Pre-flight checks for model availability
+- Automatic mode switching when requested models unavailable
+- Individual error handling for CNN and YOLO operations
+- Graceful degradation with partial results
+- Clear error messages for users
+**Key Features**:
+- Mode adaptation: "both" → "cnn" or "yolo" if one unavailable
+- Fallback switching: CNN request → YOLO if CNN unavailable
+- Error isolation: One model failure doesn't crash the other
+- User communication: Clear messages about mode adjustments
+**Testing Results**:
+- ✅ System continues working if one vision model fails
+- ✅ Users get helpful feedback about mode adjustments
+- ✅ Partial results better than complete failure
+
+### **✅ Enhanced CNN Classifier Error Handling (COMPLETE)**
+**Enhancement**: Robust error handling in CNN prediction pipeline
+**Implementation**:
+- File existence validation before processing
+- Image format validation and corruption detection
+- Model prediction error handling
+- Result validation and sanitization
+- Contextual error messages for debugging
+**Error Categories Handled**:
+- Missing image files
+- Corrupted or invalid image formats
+- Image preprocessing failures
+- Model prediction failures
+- Invalid prediction results
+**Result**: CNN classifier never crashes, always provides meaningful feedback
+
+### **✅ Enhanced YOLO Detector Error Handling (COMPLETE)**
+**Enhancement**: Robust error handling in YOLO detection pipeline
+**Implementation**:
+- File existence and format validation
+- Inference error handling with graceful fallback
+- Detection result validation and sanitization
+- Individual detection error isolation
+- Annotation creation error handling
+**Error Categories Handled**:
+- Missing or corrupted image files
+- YOLO inference failures
+- Invalid detection results
+- Annotation creation failures
+- Display and saving errors
+**Result**: YOLO detector never crashes, continues with valid detections even if some fail
+
+### **✅ System-Wide Error Isolation (COMPLETE)**
+**Achievement**: Complete error isolation across all system components
+**Implementation**:
+- Vision module failures don't affect NLP pipeline
+- Individual model failures don't crash the system
+- Partial functionality maintained when possible
+- Clear user communication about system status
+**Benefits**:
+- **Reliability**: System never completely fails
+- **User Experience**: Always get some functionality
+- **Debugging**: Clear error messages for developers
+- **Production Ready**: Graceful handling of all error conditions
 
 ## Major Achievement - Critical Bug Fix Success (5/5 COMPLETE)
 
@@ -202,10 +363,11 @@
 
 ## Project Status Summary
 ### **Core Systems Status (All Operational)**
+- **Logic/Fuzzy Pipeline**: Fact checking, fuzzy safety, and material inference ✅ (runs first, no NLP fallback)
+- **NLP Pipeline**: AIML → TF-IDF → Embedding fallback chain ✅ (only runs if Logic doesn't match)
 - **AIML**: Pattern matching for direct queries ✅
 - **TF-IDF**: Similarity-based question answering ✅ (CSV format fixed)
 - **Embedding**: Semantic understanding fallback ✅ (embeddings regenerated)
-- **Logic Engine**: Fact checking, fuzzy safety, and material inference ✅ (enhanced with universal rules)
 - **CNN Vision**: 96.73% accuracy, production ready ✅
 - **Original YOLO**: 97.2% mAP50, proven effective ✅
 

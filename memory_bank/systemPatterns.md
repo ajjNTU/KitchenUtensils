@@ -1,11 +1,17 @@
 # System Patterns: Kitchen Utensils Chatbot
 
+**PROJECT SCOPE: University Module Assessment**
+This project demonstrates AI/ML implementation skills and software engineering practices for academic assessment. The architecture showcases multi-modal AI integration and robust system design principles.
+
 ## Architecture Overview
-- Modular pipeline: AIML → TF-IDF → Embedding → Logic → Vision
-- Central router manages input normalization and fallback
+- **Dual Pipeline System**: Logic/Fuzzy pipeline (separate) + NLP pipeline (fallback chain)
+- **Logic/Fuzzy Pipeline**: Runs first for fact assertions, fact checks, and safety queries - no NLP fallback
+- **NLP Pipeline**: AIML → TF-IDF → Embedding (only runs if Logic/Fuzzy doesn't match)
+- **Vision Pipeline**: CNN and YOLO integration with multiple input methods
+- Central router manages input normalization and pipeline routing
 - Data-driven QnA (qna.csv) for similarity and semantic matching
 - CNN image classifier integrated with vision_reply function
-- Image input handling with "image: path" syntax
+- Image input handling with "image: path" syntax and natural language triggers
 - Stateless CLI interface for prototyping
 
 ## Key Technical Decisions
@@ -35,7 +41,9 @@
 - **Real-World Validation**: Essential for validating computer vision performance beyond training metrics
 
 ## Design Patterns
-- Fallback chain: Each module only triggers if previous fails/confidence is low
+- **Dual Pipeline Architecture**: Logic/Fuzzy pipeline completely separate from NLP pipeline
+- **Logic Pipeline Isolation**: Logic results (including "Unknown.") stop processing - no NLP fallback mixing
+- **NLP Fallback Chain**: Each NLP module only triggers if previous fails/confidence is low
 - Data-driven QnA: All similarity/embedding answers come from qna.csv
 - Stateless: No user session or context tracking
 - Modular vision architecture: Separate CNN and YOLO modules with unified interface

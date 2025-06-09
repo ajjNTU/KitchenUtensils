@@ -1,16 +1,21 @@
 # Progress: Kitchen Utensils Chatbot
 
+**PROJECT SCOPE: University Module Assessment**
+This project demonstrates AI/ML implementation skills and software engineering practices for academic assessment. The focus is on technical competency rather than production deployment.
+
 ## What Works
+- **Logic/Fuzzy Pipeline (Step 0)**: Runs first for fact assertions, fact checks, and safety queries ✅ **ENHANCED**: Clean separation from NLP, no fallback mixing
+- **NLP Pipeline (Steps 1-3)**: Only runs if Logic/Fuzzy doesn't match ✅
 - AIML pattern matching for all utensil classes
 - TF-IDF similarity with comprehensive QnA coverage ✅ **ENHANCED**: CSV formatting fixed for complete responses
 - Embedding fallback (spaCy) for semantic matching ✅ **ENHANCED**: Embeddings regenerated after CSV fix
 - Input normalization (case, punctuation, contractions, spelling correction)
 - Debug output for routing and confidence scores
-- Logic engine (FOL, NLTK) for fact checking (robust tilde negation) ✅ **ENHANCED**: Simplified pipeline with clean separation
+- Logic engine (FOL, NLTK) for fact checking (robust tilde negation) ✅ **ENHANCED**: Material inference with universal quantification
 - Fuzzy safety (Simpful) for utensil safety queries (sharpness/grip, dual-path membership fallback)
 - Canonical property parsing for multi-word properties (CamelCase)
 - Default sharpness is now 5.0 (medium) for fuzzy demo utensils
-- Router always routes logic/fuzzy before NLP
+- Router routes logic/fuzzy first, then NLP pipeline if no logic match
 - Demo utensils for all fuzzy safety levels: kitchenknife (low), woodenspoon (high), ladle (moderate)
 - Dev tool for KB integrity (build_kb.py)
 - Unit tests for logic/fuzzy
@@ -176,40 +181,65 @@
 
 ### **✅ MILESTONE 9: COMPLETE - ALL CRITICAL FIXES IMPLEMENTED**
 
-### **OPTIONAL ENHANCEMENTS (Lower Priority)**
+### **TASK 4: CODE QUALITY & ROBUSTNESS (Academic Scope)**
+**University Module Objectives**: Demonstrate software engineering best practices for academic assessment.
+
+#### **Phase 2: Input Validation & Sanitization (Quick Fixes)**
+- [ ] Strengthen existing input validation for user queries and file paths
+- [ ] Add basic safety checks to prevent common input errors
+- [ ] Improve error messages to be more specific and actionable
+- [ ] Keep implementation simple and practical for academic demonstration
+
+#### **Phase 3.1: Lazy Loading Only**
+- [ ] Print welcome message immediately on startup (instant user feedback)
+- [ ] Load models in background while user reads welcome message
+- [ ] Show loading progress/status for model initialization
+- [ ] Improve user experience from 10s startup delay to instant welcome
+
+#### **Phase 5.1: Code Organization & Cleanup**
+- [ ] Extract common utilities into shared modules (reduce duplication)
+- [ ] Improve inline documentation and comments for clarity
+- [ ] Add type hints where helpful for code readability
+- [ ] Clean up codebase structure and organization
+- [ ] Demonstrate software engineering best practices
+
+#### **Phase 6.2: Documentation Update**
+- [ ] Update README and docs with Task 4 improvements
+- [ ] Document the lazy loading feature and user experience improvements
+- [ ] Clean up any outdated information in documentation
+- [ ] Ensure all documentation reflects university module assessment scope
+
+### **FUTURE ENHANCEMENTS (Due: Probably Never)**
+**Note**: These are advanced features beyond the scope of university module assessment.
 - **Enhanced YOLO Quality**: Address synthetic dataset issues for better real-world performance
-  - Synthetic dataset quality issues identified (domain gap, unrealistic placement, lighting)
-  - Only 12 detections across 16 test images, low confidence scores
-  - Needs synthetic scene generation improvement or alternative training strategies
 - **Advanced Image Interface**: Drag-and-drop, batch processing capabilities
 - **Web Interface**: Convert CLI to web-based interface for broader accessibility
-- **Additional Features**: Recipe suggestions, cooking tips, nutritional information
-- **Unit Tests**: Comprehensive testing for vision modules and integration tests
-- **Documentation**: Final polish and comprehensive user/developer documentation
+- **Production Infrastructure**: Logging, monitoring, caching, configuration management
+- **Advanced Testing**: Comprehensive unit tests, integration tests, performance benchmarks
+- **Production Features**: Authentication, database integration, API development, deployment
 
 ## Current Status
 - **✅ MILESTONE 9 CRITICAL FIXES: 5/5 COMPLETE** 
 - **✅ POST-PRODUCTION DEBUG ENHANCEMENTS: 3/3 COMPLETE**
-- **✅ PRODUCTION READINESS: 100% COMPLETE** - All critical issues resolved, clean interface implemented
+- **✅ ACADEMIC OBJECTIVES: 100% ACHIEVED** - All core functionality demonstrated with professional polish
 - **✅ CORE SYSTEMS: ALL OPERATIONAL** - AIML, TF-IDF, Embedding, Logic, CNN Vision, Original YOLO
 - **✅ CSV DATA QUALITY: FIXED** - Proper formatting and complete QnA responses
 - **✅ LOGIC PIPELINE: SIMPLIFIED** - Clean separation from NLP, proper "Unknown." handling
 - **✅ MATERIAL INFERENCE: IMPLEMENTED** - Universal quantification enables powerful FOL reasoning
 - **✅ USER EXAMPLES: VALIDATED** - All startup examples use actual supported classes
-- **✅ PRODUCTION INTERFACE: IMPLEMENTED** - Clean, professional user experience
-- **✅ DEBUG CAPABILITIES: MAINTAINED** - Complete technical information available for development
+- **✅ ACADEMIC INTERFACE: IMPLEMENTED** - Clean, professional user experience suitable for assessment
+- **✅ DEBUG CAPABILITIES: MAINTAINED** - Complete technical information for demonstration
 - **✅ LOGIC DEBUG MESSAGES: SUPPRESSED** - No debug output in production mode, full debug info in debug mode
 - **✅ ERROR MESSAGES: IMPROVED** - Specific, actionable feedback for users
 - **✅ MULTI-WORD UTENSILS: FIXED** - All utensil names work correctly in logic operations
-- **Current Focus**: Optional enhancements and future feature development
-- **Status**: Production-ready system with comprehensive functionality and polished user experience
+- **Current Focus**: Task 4 - Code Quality & Robustness (academic scope)
+- **Status**: University module assessment objectives achieved with comprehensive multi-modal AI demonstration
 
 ## Known Issues
-- **No Critical Issues Remaining**: All production-blocking problems resolved
-- **Enhanced YOLO performance**: Poor real-world detection despite good training metrics (optional improvement)
-- **Synthetic dataset quality**: Domain gap between training and deployment (optional enhancement)
-- **CLI-only interface**: No web interface yet (future enhancement)
-- **Limited image input**: CLI-based only, no drag-and-drop (future enhancement)
+- **No Critical Issues Remaining**: All core functionality working for academic demonstration
+- **Enhanced YOLO performance**: Training metrics vs real-world performance gap (valuable academic lesson)
+- **CLI-only interface**: Appropriate for university module scope (web interface beyond assessment requirements)
+- **Academic Scope Limitations**: Advanced production features intentionally excluded per module requirements
 
 ## Evolution of Project Decisions
 - Raised TF-IDF fallback threshold to 0.65 for better embedding use

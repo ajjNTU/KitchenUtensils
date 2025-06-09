@@ -145,37 +145,66 @@ class CNNClassifier:
     
     def predict(self, image_path, top_k=3):
         """
-        Predict utensil class from image.
+        Predict utensil class from image with robust error handling.
         
         Args:
             image_path: Path to image file
             top_k: Number of top predictions to return
             
         Returns:
-            List of (class_name, confidence) tuples
+            List of (class_name, confidence) tuples, or empty list if failed
         """
         if self.model is None:
             raise ValueError("Model not loaded or trained")
         
-        # Load and preprocess image
-        img = Image.open(image_path).convert('RGB')
-        img = img.resize(self.img_size)
-        img_array = np.array(img) / 255.0
-        img_array = np.expand_dims(img_array, axis=0)
-        
-        # Make prediction
-        predictions = self.model.predict(img_array, verbose=0)[0]
-        
-        # Get top-k predictions
-        top_indices = np.argsort(predictions)[-top_k:][::-1]
-        results = []
-        
-        for idx in top_indices:
-            class_name = self.class_names[idx]
-            confidence = float(predictions[idx])
-            results.append((class_name, confidence))
-        
-        return results
+        try:
+            # Validate image file exists
+            if not os.path.exists(image_path):
+                raise FileNotFoundError(f"Image file not found: {image_path}")
+            
+            # Load and preprocess image with error handling
+            try:
+                img = Image.open(image_path).convert('RGB')
+            except Exception as e:
+                raise ValueError(f"Cannot open image file (corrupted or invalid format): {e}")
+            
+            try:
+                img = img.resize(self.img_size)
+                img_array = np.array(img) / 255.0
+                img_array = np.expand_dims(img_array, axis=0)
+            except Exception as e:
+                raise ValueError(f"Cannot preprocess image: {e}")
+            
+            # Make prediction with error handling
+            try:
+                predictions = self.model.predict(img_array, verbose=0)[0]
+            except Exception as e:
+                raise RuntimeError(f"Model prediction failed: {e}")
+            
+            # Validate predictions
+            if predictions is None or len(predictions) == 0:
+                return []
+            
+            # Get top-k predictions
+            try:
+                top_indices = np.argsort(predictions)[-top_k:][::-1]
+                results = []
+                
+                for idx in top_indices:
+                    if idx < len(self.class_names):
+                        class_name = self.class_names[idx]
+                        confidence = float(predictions[idx])
+                        # Ensure confidence is valid
+                        if 0 <= confidence <= 1:
+                            results.append((class_name, confidence))
+                
+                return results
+            except Exception as e:
+                raise RuntimeError(f"Error processing predictions: {e}")
+                
+        except Exception as e:
+            # Re-raise with context for better error messages
+            raise RuntimeError(f"CNN prediction failed for {image_path}: {str(e)}")
     
     def save_model(self, model_path):
         """Save trained model."""

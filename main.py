@@ -125,30 +125,64 @@ except Exception as e:
     if DEBUG_MODE:
         print(f"Warning: Could not load embedding similarity: {e}")
 
-# Initialize CNN classifier at startup
+# Initialize CNN classifier at startup with graceful degradation
 cnn_classifier = None
+cnn_available = False
 try:
     if os.path.exists(CNN_MODEL_PATH):
         cnn_classifier = CNNClassifier(model_path=CNN_MODEL_PATH)
-        print("CNN classifier loaded successfully")
+        cnn_available = True
+        if DEBUG_MODE:
+            print("✅ CNN classifier loaded successfully")
+        else:
+            print("CNN classifier loaded successfully")
     else:
-        print(f"Warning: CNN model not found at {CNN_MODEL_PATH}. CNN vision features will not work.")
+        if DEBUG_MODE:
+            print(f"⚠️  Warning: CNN model not found at {CNN_MODEL_PATH}")
+            print("   CNN vision features will be disabled")
+        else:
+            print("Note: CNN classification not available (model not found)")
 except Exception as e:
-    print(f"Warning: Could not load CNN classifier: {e}")
+    if DEBUG_MODE:
+        print(f"❌ Error loading CNN classifier: {e}")
+        print("   CNN vision features will be disabled")
+    else:
+        print("Note: CNN classification not available (loading failed)")
+    cnn_classifier = None
+    cnn_available = False
 
-# Initialize YOLO detector at startup
+# Initialize YOLO detector at startup with graceful degradation
 yolo_detector = None
+yolo_available = False
 try:
     if os.path.exists(YOLO_MODEL_PATH):
         yolo_detector = YOLODetector(model_path=YOLO_MODEL_PATH, data_yaml_path=YOLO_DATA_YAML)
-        print("YOLOv8 detector loaded successfully (trained model)")
+        yolo_available = True
+        if DEBUG_MODE:
+            print("✅ YOLOv8 detector loaded successfully (trained model)")
+        else:
+            print("YOLOv8 detector loaded successfully (trained model)")
     elif os.path.exists(YOLO_DATA_YAML):
         yolo_detector = YOLODetector(data_yaml_path=YOLO_DATA_YAML)
-        print("YOLOv8 detector loaded with pretrained model (not trained on utensils yet)")
+        yolo_available = True
+        if DEBUG_MODE:
+            print("✅ YOLOv8 detector loaded with pretrained model (not trained on utensils yet)")
+        else:
+            print("YOLOv8 detector loaded with pretrained model (not trained on utensils yet)")
     else:
-        print(f"Warning: YOLO data config not found at {YOLO_DATA_YAML}. YOLO detection will not work.")
+        if DEBUG_MODE:
+            print(f"⚠️  Warning: YOLO data config not found at {YOLO_DATA_YAML}")
+            print("   YOLO detection features will be disabled")
+        else:
+            print("Note: YOLO detection not available (config not found)")
 except Exception as e:
-    print(f"Warning: Could not load YOLO detector: {e}")
+    if DEBUG_MODE:
+        print(f"❌ Error loading YOLO detector: {e}")
+        print("   YOLO detection features will be disabled")
+    else:
+        print("Note: YOLO detection not available (loading failed)")
+    yolo_detector = None
+    yolo_available = False
 
 def aiml_reply(user_input: str) -> 'BotReply | None':
     if not aiml_kernel.numCategories():
@@ -182,6 +216,20 @@ def embed_reply(user_input: str) -> 'BotReply | None':
     return None
 
 def logic_reply(user_input: str) -> 'BotReply | None':
+    """
+    Logic/Fuzzy Pipeline - Completely separate from NLP pipeline.
+    
+    Handles:
+    - Fuzzy safety queries: "Is X safe for children?"
+    - Fact checking: "Check that X is Y" → Returns "Correct.", "Incorrect.", or "Unknown."
+    - Fact assertions: "I know that X is Y" → Adds facts with material inference
+    
+    Returns:
+    - BotReply with result (including "Unknown.") - processing stops here
+    - None if input doesn't match logic patterns → continues to NLP pipeline
+    
+    NO NLP FALLBACK: Logic results (including "Unknown.") do not fall through to NLP.
+    """
     # Route to logic if query is a fact assertion, fact check, or fuzzy safety query
     text = user_input.strip().lower()
     
@@ -270,24 +318,58 @@ def prompt_for_image_path() -> str:
 
 def vision_reply(image_path: str, mode: str = "both") -> 'BotReply | None':
     """
-    Analyze kitchen utensils from image using CNN and/or YOLO.
+    Analyze kitchen utensils from image using CNN and/or YOLO with graceful degradation.
     
     Args:
         image_path: Path to image file
         mode: "cnn" for CNN only, "yolo" for YOLO only, "both" for both models
         
     Returns:
-        BotReply with analysis results or None if failed
+        BotReply with analysis results or None if completely failed
     """
+    # Check if image file exists
     if not os.path.exists(image_path):
         return BotReply(text=f"Sorry, I cannot find the image file: {image_path}")
+    
+    # Check if any vision models are available
+    if not cnn_available and not yolo_available:
+        return BotReply(text="Sorry, no vision models are currently available for image analysis. The system is running in text-only mode.")
+    
+    # Adjust mode based on available models
+    original_mode = mode
+    if mode == "cnn" and not cnn_available:
+        if yolo_available:
+            mode = "yolo"
+            if DEBUG_MODE:
+                print("⚠️  CNN not available, switching to YOLO detection")
+        else:
+            return BotReply(text="Sorry, CNN classification is not available and no alternative vision models are loaded.")
+    elif mode == "yolo" and not yolo_available:
+        if cnn_available:
+            mode = "cnn"
+            if DEBUG_MODE:
+                print("⚠️  YOLO not available, switching to CNN classification")
+        else:
+            return BotReply(text="Sorry, YOLO detection is not available and no alternative vision models are loaded.")
+    elif mode == "both":
+        if not cnn_available and not yolo_available:
+            return BotReply(text="Sorry, no vision models are currently available for image analysis.")
+        elif not cnn_available:
+            mode = "yolo"
+            if DEBUG_MODE:
+                print("⚠️  CNN not available, using YOLO only")
+        elif not yolo_available:
+            mode = "cnn"
+            if DEBUG_MODE:
+                print("⚠️  YOLO not available, using CNN only")
     
     responses = []
     
     # Try YOLO detection (multi-object detection with annotations)
-    if mode in ["yolo", "both"] and yolo_detector is not None:
+    if mode in ["yolo", "both"] and yolo_available and yolo_detector is not None:
         try:
-            print("🔍 Running YOLO object detection...")
+            if DEBUG_MODE:
+                print("🔍 Running YOLO object detection...")
             detections, annotated_path = yolo_detector.predict_and_display(
                 image_path, 
                 conf_threshold=0.25,
@@ -304,12 +386,16 @@ def vision_reply(image_path: str, mode: str = "both") -> 'BotReply | None':
             else:
                 responses.append(("YOLO", "YOLO detection found no objects above confidence threshold."))
         except Exception as e:
-            responses.append(("YOLO", f"YOLO detection failed: {str(e)}"))
+            error_msg = f"YOLO detection encountered an error: {str(e)}"
+            if DEBUG_MODE:
+                print(f"❌ YOLO Error: {e}")
+            responses.append(("YOLO", error_msg))
     
     # Try CNN classification (single-object classification)
-    if mode in ["cnn", "both"] and cnn_classifier is not None:
+    if mode in ["cnn", "both"] and cnn_available and cnn_classifier is not None:
         try:
-            print("🔍 Running CNN classification...")
+            if DEBUG_MODE:
+                print("🔍 Running CNN classification...")
             predictions = cnn_classifier.predict(image_path, top_k=3)
             
             if predictions:
@@ -332,24 +418,37 @@ def vision_reply(image_path: str, mode: str = "both") -> 'BotReply | None':
             else:
                 responses.append(("CNN", "CNN classification found no predictions."))
         except Exception as e:
-            responses.append(("CNN", f"CNN classification failed: {str(e)}"))
+            error_msg = f"CNN classification encountered an error: {str(e)}"
+            if DEBUG_MODE:
+                print(f"❌ CNN Error: {e}")
+            responses.append(("CNN", error_msg))
+    
+    # Handle case where no models could process the image
+    if not responses:
+        return BotReply(text="Sorry, I couldn't analyze this image. All available vision models encountered errors or are unavailable.")
     
     # Format combined response
-    if not responses:
-        return BotReply(text="Sorry, no vision models are available for image analysis.")
-    
-    # Combine all responses
     final_response = "🖼️ Image Analysis Results:\n\n"
     for model_name, response in responses:
         final_response += f"{model_name}: {response}\n\n"
     
-    # Add summary based on mode
-    if mode == "both" and len(responses) == 2 and all("failed" not in resp[1] for resp in responses):
+    # Add helpful tips and mode adjustment notices
+    if original_mode != mode:
+        final_response += f"💡 Note: Requested {original_mode.upper()} mode, but used {mode.upper()} due to model availability.\n\n"
+    
+    # Add summary based on actual mode used
+    if mode == "both" and len(responses) == 2 and all("error" not in resp[1].lower() for resp in responses):
         final_response += "💡 Tip: YOLO shows all detected objects with bounding boxes, while CNN provides single-object classification."
     elif mode == "cnn":
-        final_response += "💡 Using CNN for single-object classification. Try 'Detect everything in this image' for multi-object detection."
+        if yolo_available:
+            final_response += "💡 Using CNN for single-object classification. Try 'Detect everything in this image' for multi-object detection."
+        else:
+            final_response += "💡 Using CNN for single-object classification. (YOLO detection currently unavailable)"
     elif mode == "yolo":
-        final_response += "💡 Using YOLO for multi-object detection with bounding boxes. Try 'What is in this image?' for classification."
+        if cnn_available:
+            final_response += "💡 Using YOLO for multi-object detection with bounding boxes. Try 'What is in this image?' for classification."
+        else:
+            final_response += "💡 Using YOLO for multi-object detection with bounding boxes. (CNN classification currently unavailable)"
     
     return BotReply(text=final_response.strip())
     
@@ -371,6 +470,33 @@ def main():
         "Blender", "Bowl", "Canopener", "Choppingboard", "Colander", "Cup", "Dinnerfork", "Dinnerknife", "Fishslice", "Garlicpress", "Kitchenknife", "Ladle", "Pan", "Peeler", "Saucepan", "Spoon", "Teaspoon", "Tongs", "Tray", "Whisk", "Woodenspoon"
     ]
     
+    # Build vision features description based on availability
+    vision_features = []
+    if cnn_available and yolo_available:
+        vision_features = [
+            "  • Direct: 'image: path/to/image.jpg' (uses both CNN + YOLO)",
+            "  • CNN only: 'What is in this image?' (single-object classification)",
+            "  • YOLO only: 'Detect everything in this image' (multi-object with annotations)"
+        ]
+    elif cnn_available:
+        vision_features = [
+            "  • Direct: 'image: path/to/image.jpg' (CNN classification)",
+            "  • CNN: 'What is in this image?' (single-object classification)",
+            "  • Note: YOLO detection currently unavailable"
+        ]
+    elif yolo_available:
+        vision_features = [
+            "  • Direct: 'image: path/to/image.jpg' (YOLO detection)",
+            "  • YOLO: 'Detect everything in this image' (multi-object with annotations)",
+            "  • Note: CNN classification currently unavailable"
+        ]
+    else:
+        vision_features = [
+            "  • Image analysis currently unavailable (no vision models loaded)"
+        ]
+    
+    vision_text = "\n".join(vision_features)
+    
     # Welcome message based on debug mode
     if DEBUG_MODE:
         print(f"""
@@ -382,9 +508,7 @@ You can:
 - Tell the chatbot facts (e.g., 'I know that a tray is metal')
 - Ask about utensil safety (e.g., 'Is a kitchen knife safe for children?')
 - Identify utensils from images:
-  • Direct: 'image: path/to/image.jpg' (uses both CNN + YOLO)
-  • CNN only: 'What is in this image?' (single-object classification)
-  • YOLO only: 'Detect everything in this image' (multi-object with annotations)
+{vision_text}
 - Type 'exit' or 'quit' to leave
 
 Supported utensil classes:
@@ -405,9 +529,7 @@ You can:
 - Tell the chatbot facts (e.g., 'I know that a tray is metal')
 - Ask about utensil safety (e.g., 'Is a kitchen knife safe for children?')
 - Identify utensils from images:
-  • Direct: 'image: path/to/image.jpg' (uses both CNN + YOLO)
-  • CNN only: 'What is in this image?' (single-object classification)
-  • YOLO only: 'Detect everything in this image' (multi-object with annotations)
+{vision_text}
 - Type 'exit' or 'quit' to leave
 
 Supported utensil classes:
@@ -475,21 +597,29 @@ Supported utensil classes:
             print("\n🔍 DEBUG: Processing normalized input: " + user_input_normalized + ", Original input: " + user_input_original)
             print("─" * 50)
 
-        # Step 0: Try Logic/Fuzzy Module first
-        # Pass original user input to logic_reply as it might need it for better parsing in get_fuzzy_safety_reply
+        # DUAL PIPELINE ARCHITECTURE:
+        # 1. Logic/Fuzzy Pipeline (Step 0): Runs first, no NLP fallback
+        # 2. NLP Pipeline (Steps 1-3): Only runs if Logic/Fuzzy doesn't match
+        
+        # Step 0: Logic/Fuzzy Pipeline - Completely separate from NLP
+        # Handles: fact assertions, fact checks, fuzzy safety queries
+        # Returns result and stops (including "Unknown.") - no NLP fallback mixing
         logic_result_obj = logic_reply(user_input_original)
         
         if logic_result_obj:
             if DEBUG_MODE:
                 print(f"0️⃣ Logic/Fuzzy: {logic_result_obj.text}")
-                print("✅ USING LOGIC/FUZZY ANSWER")
+                print("✅ USING LOGIC/FUZZY ANSWER (No NLP fallback)")
             print(logic_result_obj.text)
-            continue # Skip to next input
+            continue # Logic pipeline complete - skip NLP pipeline
         else:
             if DEBUG_MODE:
-                print(f"0️⃣ Logic/Fuzzy: No direct logic/fuzzy answer found. Proceeding to NLP pipeline...")
+                print(f"0️⃣ Logic/Fuzzy: No logic/fuzzy match found. Proceeding to NLP pipeline...")
 
-        # Step 1: AIML (using normalized input)
+        # NLP PIPELINE (Steps 1-3): Only runs if Logic/Fuzzy didn't match
+        # Fallback chain: AIML → TF-IDF → Embedding
+        
+        # Step 1: AIML Pattern Matching
         aiml_result = aiml_reply(user_input_normalized)
         if aiml_result:
             if DEBUG_MODE:
@@ -504,7 +634,7 @@ Supported utensil classes:
             if DEBUG_MODE:
                 print(f"1️⃣ AIML: No match found for input: {user_input_normalized.upper()}")
 
-        # Step 2: TF-IDF (using normalized input)
+        # Step 2: TF-IDF Similarity Matching (NLP Pipeline)
         tfidf_result = tfidf_reply(user_input_normalized)
         tfidf_score = None
         tfidf_top_answer = None
@@ -530,7 +660,8 @@ Supported utensil classes:
             if DEBUG_MODE:
                 print("2️⃣ TF-IDF: Not available")
         
-        # Step 3: Embedding (always show top candidate and score)
+        # Step 3: Embedding Semantic Matching (NLP Pipeline Fallback)
+        # Only runs if TF-IDF confidence is below threshold
         embed_score = None
         embed_top_answer = None
         if embed_sim and tfidf_sim:
@@ -563,10 +694,10 @@ Supported utensil classes:
             if DEBUG_MODE:
                 print("3️⃣ Embedding: Not available")
         
-        # Step 4: Fallback
+        # Step 4: Final Fallback (No pipeline matched)
         if not answer_found:
             if DEBUG_MODE:
-                print("5️⃣ Fallback: No matches found")
+                print("5️⃣ Fallback: No matches found in any pipeline")
             print("Sorry, I don't know that.")
 
 if __name__ == "__main__":
