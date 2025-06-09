@@ -1,15 +1,25 @@
 # Tested on Python 3.10.x
+# Updated versions compatible with current PyTorch ecosystem (2024/2025)
 python-aiml==0.9.*
-spacy==3.7.*
-nltk==3.8.*
-simpful==2.10.*
-ultralytics==8.0.*
-torch==2.1.*
-scikit-learn==1.3.*
-pyspellchecker==0.8.3
+spacy>=3.7.0,<4.0.0
+nltk>=3.8.0,<4.0.0
+simpful>=2.10.0,<3.0.0
+ultralytics>=8.0.0,<9.0.0
+torch>=2.2.0
+scikit-learn>=1.3.0,<2.0.0
+pyspellchecker>=0.8.0,<1.0.0
 tensorflow==2.15.*
-pillow==10.0.*
-matplotlib==3.7.*
-pyyaml==6.0.*
+pillow>=10.0.0,<11.0.0
+matplotlib>=3.7.0,<4.0.0
+pyyaml>=6.0.0,<7.0.0
 
-# Note: After pip install, run: python -m spacy download en_core_web_md 
+# Note: After pip install, run: python -m spacy download en_core_web_md
+
+# Current working versions (as of your environment):
+# PyTorch: 2.7.1+cu118
+# TensorFlow: 2.15.1 (REQUIRED for CNN model compatibility)
+# Ultralytics: 8.0.239
+# spaCy: 3.7.5
+
+# IMPORTANT: CNN model requires TensorFlow 2.15.x for proper loading
+# If you encounter CNN loading issues on other systems, ensure TensorFlow 2.15.x is installed 
