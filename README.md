@@ -24,6 +24,17 @@ A conversational assistant that demonstrates multi-modal AI integration through 
 **Assessment:** ISYS37101 Artificial Intelligence for Data Science Coursework
 
 ## Quick Start
+
+### Web Interface (Streamlit)
+```bash
+# Run web interface
+streamlit run streamlit_app.py
+```
+**Live Demo**: [Kitchen Utensils Chatbot](https://your-app.streamlit.app) *(coming soon)*
+
+**Note**: The web demo includes complete chat functionality. Vision features (image analysis) may be limited due to model file size constraints on cloud deployment. See `MODEL_DEPLOYMENT_SOLUTIONS.md` for details.
+
+### Command Line Interface
 ```bash
 # Production mode (clean interface)
 python main.py
@@ -40,6 +51,13 @@ python -m spacy download en_core_web_md
 ```
 
 **Tested on Python 3.10.x**
+
+### For Web Interface
+The Streamlit web interface provides the same functionality as the CLI with a modern web UI:
+- Interactive chat interface
+- Image upload and analysis
+- Real-time responses
+- Visual feedback for model availability
 
 ## Example Queries
 - What is a wood spoon?
